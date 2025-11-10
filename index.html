@@ -1,0 +1,2739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    MIT License
+
+    Copyright (c) 2025 NQR
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+  -->
+    <!-- Favicons (browser tabs, bookmarks) -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16x16.png">
+    
+    <!-- iOS & iPadOS (home screen icon when �Add to Home Screen�) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon-180x180.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inknigma</title>
+    <style>
+        :root {
+            --card: #111;                        /* license background */
+            --border: rgba(255, 0, 212, 0.35);   /* license border */
+            --dim: #a9a9b2;                      /* license text color */
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+        }
+
+        #control-panel {
+            width: 320px;
+            background: linear-gradient(135deg, #2e1a1a 0%, #3e1621 100%);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid #ff00d4;
+            box-shadow: 4px 0 20px rgba(255, 0, 212, 0.3);
+        }
+
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+        }
+
+        #canvas-container.dragging {
+            cursor: grabbing;
+        }
+
+        #canvas {
+            display: block;
+            cursor: inherit;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+            color: #ff00d4;
+            text-shadow: 0 0 10px rgba(255, 0, 212, 0.5);
+            text-align: center;
+        }
+
+        .tagline {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 20px;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 0, 212, 0.2);
+        }
+
+        .section h3 {
+            font-size: 13px;
+            margin-bottom: 10px;
+            color: #ff00d4;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #ff00d4 0%, #cc0099 100%);
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 11px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 0, 212, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.preview-mode {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .layer-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 0, 212, 0.1);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 0, 212, 0.3);
+            transition: all 0.2s;
+        }
+
+        .layer-item.selected {
+            background: rgba(255, 0, 212, 0.3);
+            border-color: #ff00d4;
+        }
+
+        .layer-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .layer-header input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .layer-header input[type="text"],
+        .layer-header textarea {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 0, 212, 0.3);
+            border-radius: 4px;
+            color: #fff;
+            padding: 5px;
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        .layer-header textarea {
+            resize: vertical;
+            min-height: 40px;
+        }
+
+        .layer-header .delete-btn {
+            padding: 4px 8px;
+            font-size: 10px;
+            width: auto;
+            margin: 0;
+            background: rgba(255, 0, 0, 0.5);
+        }
+
+        .layer-header .delete-btn:hover {
+            background: rgba(255, 0, 0, 0.7);
+        }
+
+        .layer-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .layer-controls label {
+            color: #aaa;
+        }
+
+        .layer-controls input[type="number"] {
+            width: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 0, 212, 0.3);
+            border-radius: 4px;
+            color: #fff;
+            padding: 4px;
+            font-size: 11px;
+        }
+
+        .effect-name {
+            font-size: 11px;
+            color: #ff88ff;
+            font-weight: bold;
+            text-align: center;
+            padding: 4px;
+            background: rgba(255, 0, 212, 0.1);
+            border-radius: 4px;
+        }
+
+        .add-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .hint {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 12px 20px;
+            border-radius: 6px;
+            border: 1px solid #ff00d4;
+            font-size: 12px;
+            color: #ff00d4;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+
+        .hint.visible {
+            opacity: 1;
+        }
+
+        #layers-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .scroll-hint {
+            font-size: 10px;
+            color: #888;
+            text-align: center;
+            padding: 5px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        .param {
+            margin: 8px 0;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .param-label {
+            color: #aaa;
+        }
+
+        .param-value {
+            color: #ff88ff;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        .lighting-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .lighting-controls input[type="number"] {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 4px;
+            color: #00d4ff;
+            padding: 8px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .lighting-name {
+            font-size: 14px;
+            color: #00ff88;
+            font-weight: bold;
+            text-align: center;
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 4px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        /* FOOTER / LICENSE */
+        .license-footer {
+          margin-top: 30px;
+          margin-bottom: 20px;
+          padding: 10px 8px;
+          font-size: 0.68rem;
+          color: var(--dim);
+          opacity: 0.7;
+          cursor: pointer;
+          transition: opacity 0.15s ease;
+          text-align: center;
+        }
+    
+        .license-footer:hover {
+          opacity: 1;
+        }
+    
+        .license-overlay {
+          display: none;
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.7);
+          z-index: 999;
+        }
+    
+        .license-modal {
+          display: none;
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: var(--card);
+          border: 2px solid var(--border);
+          border-radius: 12px;
+          padding: 20px;
+          max-width: 520px;
+          width: 90%;
+          max-height: 80vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0,0,0,.6);
+          z-index: 1000;
+          text-align: center;
+        }
+    
+        .license-modal.show,
+        .license-overlay.show {
+          display: block;
+        }
+    
+        .license-modal-header {
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding-right: 32px;
+          gap: 12px;
+        }
+    
+        .license-modal-title {
+          margin: 0;
+          font-size: 1rem;
+          text-align: center;
+          width: 100%;
+        }
+    
+        .license-modal-close {
+          position: absolute;
+          top: 0;
+          right: 0;
+          cursor: pointer;
+          font-size: 1.5rem;
+          color: var(--dim);
+          line-height: 1;
+        }
+    
+        .small-muted {
+          color: var(--dim);
+          font-size: 0.7rem;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="control-panel">
+        <img src="assets/images/logo.png" alt="App Logo" class="app-logo" style="display:block; margin-left:auto; margin-right:auto; width:50%;">
+        <h1>INKNIGMA</h1>
+        <div class="tagline">Write in invisible ink</div>
+        
+        <div class="section">
+            <button onclick="document.getElementById('base-image-input').click()">Load Base Image</button>
+            <input type="file" id="base-image-input" accept="image/*">
+        </div>
+
+        <div class="section">
+            <button id="preview-toggle-btn" onclick="app.togglePreviewMode()" disabled>
+                Switch to Lighting Preview
+            </button>
+        </div>
+
+        <div id="encoding-mode-panel">
+            <div class="section">
+                <h3>Hidden Layers</h3>
+                <div id="layers-container"></div>
+                <div class="add-buttons">
+                    <button onclick="app.addTextLayer()">Add Text</button>
+                    <button onclick="app.addImageLayer()">Add Image</button>
+                </div>
+                <div class="scroll-hint">Scroll over layer box to change effect<br>Shift+drag resize for fixed aspect<br>Ctrl+Scroll to zoom • Drag to pan</div>
+            </div>
+
+            <div class="section">
+                <button onclick="app.resetView()">Reset View</button>
+            </div>
+
+            <div class="section">
+                <button id="download-btn" onclick="app.downloadImage()" disabled>Download Image</button>
+            </div>
+
+            <!-- FOOTER / LICENSE -->
+            <footer class="license-footer" id="licenseLink">
+              MIT License • Developed by NQR • Click to view
+            </footer>
+        </div>
+          
+
+        <div id="lighting-mode-panel" style="display: none;">
+            <div class="section">
+                <h3>Lighting Preview</h3>
+                <div class="lighting-name" id="lighting-name">No Effect</div>
+                <div class="lighting-controls">
+                    <input type="number" id="lighting-index-input" placeholder="Jump to effect #" min="1" max="177">
+                    <div class="param">
+                        <span class="param-label">Effect:</span>
+                        <span class="param-value" id="lighting-index">0 / 177</span>
+                    </div>
+                    <div class="param">
+                        <span class="param-label">Zoom:</span>
+                        <span class="param-value" id="zoom-value-lighting">100%</span>
+                    </div>
+                </div>
+                <div class="scroll-hint">
+                    Scroll anywhere to change light<br>
+                    Alt+Scroll for fast category jump<br>
+                    Ctrl+Scroll to zoom • Drag to pan
+                </div>
+            </div>
+            <div class="section">
+                <button onclick="app.resetView()">Reset View</button>
+            </div>
+            <!-- FOOTER / LICENSE -->
+            <footer class="license-footer" id="licenseLinkLighting">
+              MIT License • Developed by NQR • Click to view
+            </footer>
+        </div>
+        <div class="license-overlay" id="licenseOverlay"></div>
+        <div class="license-modal" id="licenseModal" role="dialog" aria-modal="true" aria-labelledby="licenseTitle">
+          <div class="license-modal-header">
+            <h3 class="license-modal-title" id="licenseTitle">MIT License</h3>
+            <span class="license-modal-close" id="licenseClose" aria-label="Close license dialog">&times;</span>
+          </div>
+          <pre class="small-muted" style="text-align:center; white-space:pre-wrap; margin-top:14px;">
+  Copyright (c) 2025 NQR
+  
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+  
+  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+          </pre>
+        </div>
+
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+        <div class="hint" id="hint">Load a base image to begin</div>
+    </div>
+
+    <input type="file" id="layer-image-input" accept="image/*" style="display: none;">
+
+    <script>
+        const app = {
+            canvas: null,
+            ctx: null,
+            baseImage: null,
+            layers: [],
+            selectedLayerId: null,
+            nextLayerId: 1,
+            isDragging: false,
+            isResizing: false,
+            isRotating: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            dragOffsetX: 0,
+            dragOffsetY: 0,
+            
+            // Zoom and pan
+            scale: 1.0,
+            panX: 0,
+            panY: 0,
+            isPanning: false,
+            panStartX: 0,
+            panStartY: 0,
+            lastPanX: 0,
+            lastPanY: 0,
+
+            // Preview mode
+            previewMode: 'encoding', // 'encoding' or 'lighting'
+            currentLightingIndex: 0,
+            
+            // Cached rendered image
+            cachedEncodedImage: null,
+
+            // Steganography effects
+            stegoEffects: [],
+            
+            // Lighting effects (Lucyra's detection methods)
+            lightingEffects: [],
+            effectGroups: [],
+
+            // Recommendation system
+            recommendation: null,
+            recommendationDebounce: null,
+
+            // Calculate the transform from base image coordinates to canvas display coordinates
+            getImageToCanvasTransform() {
+                if (!this.baseImage) return { offsetX: 0, offsetY: 0, scale: 1 };
+
+                const imgAspect = this.baseImage.width / this.baseImage.height;
+                const canvasAspect = this.canvas.width / this.canvas.height;
+                let displayScale, offsetX, offsetY;
+
+                if (imgAspect > canvasAspect) {
+                    // Image is wider - fit to width
+                    displayScale = this.canvas.width / this.baseImage.width;
+                    const displayHeight = this.baseImage.height * displayScale;
+                    offsetX = 0;
+                    offsetY = (this.canvas.height - displayHeight) / 2;
+                } else {
+                    // Image is taller - fit to height
+                    displayScale = this.canvas.height / this.baseImage.height;
+                    const displayWidth = this.baseImage.width * displayScale;
+                    offsetX = (this.canvas.width - displayWidth) / 2;
+                    offsetY = 0;
+                }
+
+                return { offsetX, offsetY, scale: displayScale };
+            },
+
+            // Convert canvas coordinates to image coordinates
+            canvasToImage(canvasX, canvasY) {
+                const transform = this.getImageToCanvasTransform();
+                const x = (canvasX - transform.offsetX) / transform.scale;
+                const y = (canvasY - transform.offsetY) / transform.scale;
+                return { x, y };
+            },
+
+            // Convert image coordinates to canvas coordinates
+            imageToCanvas(imageX, imageY) {
+                const transform = this.getImageToCanvasTransform();
+                const x = imageX * transform.scale + transform.offsetX;
+                const y = imageY * transform.scale + transform.offsetY;
+                return { x, y };
+            },
+
+            init() {
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+                this.setupStegoEffects();
+                this.setupLightingEffects();
+                this.setupEventListeners();
+                this.resizeCanvas();
+            },
+
+            setupStegoEffects() {
+                const effects = [];
+
+                // E1: Bit-plane (LSB) embed - Best viewer: Bit Plane lighting effects
+                for (const ch of [0, 1, 2]) {
+                    const chName = ['Red', 'Green', 'Blue'][ch];
+                    for (let plane = 0; plane <= 2; plane++) {
+                        effects.push({ 
+                            id: `bitplane_${chName.toLowerCase()}_${plane}`,
+                            name: `LSB ${chName} P${plane}`, 
+                            encode: this.encodeBitPlane, 
+                            params: { channel: ch, plane: plane },
+                            bestViewer: `${chName} Bit ${plane}`,
+                            defaultStrength: 0.5
+                        });
+                    }
+                }
+
+                // E2: Hue-only nudge (iso-luminant) - Best viewer: HueOnly / HueAmplified
+                for (let i = 1; i <= 3; i++) {
+                    const deltaMax = i * 2; // 2, 4, 6 degrees
+                    effects.push({ 
+                        id: `hue_${i}`,
+                        name: `Hue ${deltaMax}°`, 
+                        encode: this.encodeHueNudge, 
+                        params: { deltaHueMax: deltaMax },
+                        bestViewer: i <= 1 ? 'Hue Hide' : 'Hue Amp',
+                        defaultStrength: 0.5
+                    });
+                }
+
+                // E3: Chroma (iso-luminant) nudge - Best viewer: RedOnly / GreenOnly / BlueOnly
+                for (const bias of ['r', 'g', 'b']) {
+                    const biasName = {'r': 'Red', 'g': 'Green', 'b': 'Blue'}[bias];
+                    effects.push({ 
+                        id: `chroma_${bias}`,
+                        name: `Chroma ${biasName}`, 
+                        encode: this.encodeChromaIso, 
+                        params: { bias: bias },
+                        bestViewer: `${biasName} Only`,
+                        defaultStrength: 0.4
+                    });
+                }
+
+                // E4: High-pass watermark - Best viewer: EdgeDetect / Gradient
+                effects.push({ 
+                    id: 'highpass',
+                    name: 'High-Pass Edge', 
+                    encode: this.encodeHighPass, 
+                    params: {},
+                    bestViewer: 'Edge Soft',
+                    defaultStrength: 0.6
+                });
+
+                // E5: Local contrast watermark - Best viewer: Contrast
+                // Single effect, toned down by half from original
+                effects.push({ 
+                    id: 'contrast_1',
+                    name: 'Local Contrast', 
+                    encode: this.encodeLocalContrast, 
+                    params: { gMax: 0.05 }, // 0.1 / 2 = 0.05
+                    bestViewer: 'Contrast 0.0',
+                    defaultStrength: 0.5
+                });
+
+                this.stegoEffects = effects;
+            },
+
+            setupLightingEffects() {
+                const effects = [];
+
+                // Exact copy of Lucyra's detection effects in same order
+                
+                // Brightness sweep (11 effects)
+                for (let i = 0; i <= 10; i++) {
+                    const boost = 0.5 + (i * 0.25);
+                    effects.push({ name: `Brightness ${boost.toFixed(2)}x`, apply: this.brightness, params: { boost } });
+                }
+
+                // Contrast sweep (21 effects)
+                for (let i = -8; i <= 12; i++) {
+                    const factor = i * 0.5;
+                    effects.push({ name: `Contrast ${factor.toFixed(1)}`, apply: this.contrast, params: { factor } });
+                }
+
+                // RGB Channel isolation with intensity variations (15 effects)
+                for (const ch of [0, 1, 2]) {
+                    const name = ['Red', 'Green', 'Blue'][ch];
+                    for (let i = 1; i <= 5; i++) {
+                        const factor = i * 0.5;
+                        effects.push({ name: `${name} x${factor.toFixed(1)}`, apply: this.amplifyChannel, params: { channel: ch, factor } });
+                    }
+                }
+
+                // Pure channel isolation (3 effects)
+                effects.push({ name: 'Red Only', apply: this.isolateChannel, params: { channel: 0 } });
+                effects.push({ name: 'Green Only', apply: this.isolateChannel, params: { channel: 1 } });
+                effects.push({ name: 'Blue Only', apply: this.isolateChannel, params: { channel: 2 } });
+
+                // Inverted variations (4 effects)
+                effects.push({ name: 'Full Invert', apply: this.invert, params: {} });
+                effects.push({ name: 'Invert Red', apply: this.invertChannel, params: { channel: 0 } });
+                effects.push({ name: 'Invert Green', apply: this.invertChannel, params: { channel: 1 } });
+                effects.push({ name: 'Invert Blue', apply: this.invertChannel, params: { channel: 2 } });
+
+                // LSB visualization (24 effects)
+                for (const ch of [0, 1, 2]) {
+                    const name = ['Red', 'Green', 'Blue'][ch];
+                    for (let bit = 0; bit < 8; bit++) {
+                        effects.push({ name: `${name} Bit ${bit}`, apply: this.bitPlane, params: { channel: ch, bit } });
+                    }
+                }
+
+                // Color differences with amplification (15 effects)
+                const pairs = [[0, 1, 'R-G'], [0, 2, 'R-B'], [1, 2, 'G-B']];
+                for (const [ch1, ch2, label] of pairs) {
+                    for (let i = 1; i <= 5; i++) {
+                        const amp = i;
+                        effects.push({ name: `${label} Diff x${amp}`, apply: this.colorDifference, params: { ch1, ch2, amp } });
+                    }
+                }
+
+                // Gradient detection (3 effects)
+                effects.push({ name: 'H-Gradient', apply: this.gradientDetect, params: { direction: 'horizontal' } });
+                effects.push({ name: 'V-Gradient', apply: this.gradientDetect, params: { direction: 'vertical' } });
+                effects.push({ name: 'All Gradients', apply: this.gradientDetect, params: { direction: 'both' } });
+
+                // Statistical thresholding (16 effects)
+                for (let i = 1; i <= 8; i++) {
+                    const boost = i * 2;
+                    effects.push({ name: `Above Avg x${boost}`, apply: this.aboveAverage, params: { boost } });
+                }
+                for (let i = 1; i <= 8; i++) {
+                    const boost = i * 2;
+                    effects.push({ name: `Below Avg x${boost}`, apply: this.belowAverage, params: { boost } });
+                }
+
+                // HSL components (5 effects)
+                effects.push({ name: 'Hue Only', apply: this.hueOnly, params: {} });
+                effects.push({ name: 'Saturation Only', apply: this.saturationOnly, params: {} });
+                effects.push({ name: 'Luminance Only', apply: this.luminanceOnly, params: {} });
+                effects.push({ name: 'Hue Amplified', apply: this.hueAmplified, params: {} });
+                effects.push({ name: 'Saturation Amplified', apply: this.saturationAmplified, params: {} });
+
+                // XOR patterns (10 effects)
+                for (const val of [1, 3, 7, 15, 31, 63, 85, 127, 170, 255]) {
+                    effects.push({ name: `XOR ${val}`, apply: this.xorPattern, params: { value: val } });
+                }
+
+                // Edge detection variations (3 effects)
+                effects.push({ name: 'Edges Soft', apply: this.edgeDetect, params: { threshold: 0.5 } });
+                effects.push({ name: 'Edges Normal', apply: this.edgeDetect, params: { threshold: 1.0 } });
+                effects.push({ name: 'Edges Hard', apply: this.edgeDetect, params: { threshold: 1.5 } });
+
+                // Posterization (8 effects)
+                for (let levels = 2; levels <= 16; levels += 2) {
+                    effects.push({ name: `Posterize ${levels}`, apply: this.posterize, params: { levels } });
+                }
+
+                // Modulo operations (7 effects)
+                for (const mod of [2, 4, 8, 16, 32, 64, 128]) {
+                    effects.push({ name: `Modulo ${mod}`, apply: this.modulo, params: { value: mod } });
+                }
+
+                // Threshold operations (7 effects)
+                for (let thresh = 32; thresh <= 224; thresh += 32) {
+                    effects.push({ name: `Threshold ${thresh}`, apply: this.threshold, params: { value: thresh } });
+                }
+
+                // Gamma correction (9 effects)
+                for (let i = 1; i <= 9; i++) {
+                    const gamma = i * 0.3;
+                    effects.push({ name: `Gamma ${gamma.toFixed(1)}`, apply: this.gamma, params: { gamma } });
+                }
+
+                // Color temperature shifts (11 effects)
+                for (let i = -5; i <= 5; i++) {
+                    const temp = i * 20;
+                    effects.push({ name: `Temp ${temp > 0 ? '+' : ''}${temp}`, apply: this.colorTemp, params: { temp } });
+                }
+
+                // Solarization (5 effects)
+                for (let i = 1; i <= 5; i++) {
+                    const level = i * 50;
+                    effects.push({ name: `Solarize ${level}`, apply: this.solarize, params: { level } });
+                }
+
+                this.lightingEffects = effects;
+                
+                // Build effect groups for Alt+scroll
+                this.effectGroups = [0];
+                let lastBaseName = '';
+                for (let i = 0; i < effects.length; i++) {
+                    const baseName = effects[i].name.replace(/[\d.+\-x]+/g, '').trim();
+                    if (baseName !== lastBaseName && lastBaseName !== '') {
+                        this.effectGroups.push(i);
+                    }
+                    lastBaseName = baseName;
+                }
+            },
+
+            // ==================== LINEAR LIGHT & UTILITIES ====================
+
+            // sRGB [0..255] to linear [0..1] 
+            srgb8ToLinear01(x) {
+                const s = x / 255;
+                return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+            },
+
+            // Linear [0..1] to sRGB [0..255]
+            linear01ToSrgb8(l) {
+                const s = l <= 0.0031308 ? 12.92 * l : 1.055 * Math.pow(l, 1 / 2.4) - 0.055;
+                return Math.max(0, Math.min(255, Math.round(s * 255)));
+            },
+
+            // Rec.709 luma in linear space [0..1]
+            getLumaLinear(rLin, gLin, bLin) {
+                return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
+            },
+
+            // Deterministic hash for stochastic encoding
+            hash2d(x, y, seed = 0) {
+                let h = seed;
+                h = ((h << 5) - h + x) | 0;
+                h = ((h << 5) - h + y) | 0;
+                h = h ^ (h >>> 16);
+                h = Math.imul(h, 0x85ebca6b);
+                h = h ^ (h >>> 13);
+                h = Math.imul(h, 0xc2b2ae35);
+                h = h ^ (h >>> 16);
+                return Math.abs(h) / 2147483647;
+            },
+
+            // Compute texture mask from luma gradients
+            computeTextureMask(data, width, height) {
+                const mask = new Float32Array(width * height);
+                
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const idx = y * width + x;
+                        const i = idx * 4;
+                        
+                        const centerLuma = this.getLumaLinear(
+                            this.srgb8ToLinear01(data[i]),
+                            this.srgb8ToLinear01(data[i + 1]),
+                            this.srgb8ToLinear01(data[i + 2])
+                        );
+                        
+                        const iRight = i + 4;
+                        const iLeft = i - 4;
+                        const iDown = i + width * 4;
+                        const iUp = i - width * 4;
+                        
+                        const rightLuma = this.getLumaLinear(
+                            this.srgb8ToLinear01(data[iRight]),
+                            this.srgb8ToLinear01(data[iRight + 1]),
+                            this.srgb8ToLinear01(data[iRight + 2])
+                        );
+                        const leftLuma = this.getLumaLinear(
+                            this.srgb8ToLinear01(data[iLeft]),
+                            this.srgb8ToLinear01(data[iLeft + 1]),
+                            this.srgb8ToLinear01(data[iLeft + 2])
+                        );
+                        const downLuma = this.getLumaLinear(
+                            this.srgb8ToLinear01(data[iDown]),
+                            this.srgb8ToLinear01(data[iDown + 1]),
+                            this.srgb8ToLinear01(data[iDown + 2])
+                        );
+                        const upLuma = this.getLumaLinear(
+                            this.srgb8ToLinear01(data[iUp]),
+                            this.srgb8ToLinear01(data[iUp + 1]),
+                            this.srgb8ToLinear01(data[iUp + 2])
+                        );
+                        
+                        const gradX = (rightLuma - leftLuma) / 2;
+                        const gradY = (downLuma - upLuma) / 2;
+                        const gradMag = Math.sqrt(gradX * gradX + gradY * gradY);
+                        
+                        // Logistic normalization
+                        mask[idx] = 1 / (1 + Math.exp(-10 * (gradMag - 0.05)));
+                    }
+                }
+                
+                return mask;
+            },
+
+            // RGB to HSL (expects sRGB values 0-255)
+            rgbToHsl(r, g, b) {
+                r /= 255; g /= 255; b /= 255;
+                const max = Math.max(r, g, b), min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+
+                if (max === min) {
+                    h = s = 0;
+                } else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+                return [h, s, l];
+            },
+
+            // HSL to RGB (returns sRGB values 0-255)
+            hslToRgb(h, s, l) {
+                let r, g, b;
+
+                if (s === 0) {
+                    r = g = b = l;
+                } else {
+                    const hue2rgb = (p, q, t) => {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    };
+
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+
+                return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+            },
+
+            // ==================== ENCODER SETUP ====================
+
+            // ==================== THE 5 CURATED ENCODERS ====================
+
+            // E1: Bit-plane (LSB) with stochastic masking
+            // Best viewer: Bit Plane lighting effects
+            encodeBitPlane(imageData, contentData, params) {
+                const data = imageData.data;
+                const content = contentData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const strength = params.strength !== undefined ? params.strength : 0.5;
+                const plane = params.plane !== undefined ? params.plane : 0;
+                const channel = params.channel !== undefined ? params.channel : 0;
+                const bitMask = 1 << plane;
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const i = (y * width + x) * 4;
+                        const w = content[i + 3] / 255;
+                        
+                        if (w > 0) {
+                            const prob = w * strength;
+                            const rng = this.hash2d(x, y, plane);
+                            const ch = i + channel;
+                            
+                            if (rng < prob) {
+                                const contentBright = (content[i] + content[i+1] + content[i+2]) / 3;
+                                if (contentBright > 128) {
+                                    data[ch] = data[ch] | bitMask;
+                                } else {
+                                    data[ch] = data[ch] & ~bitMask;
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+
+            // E2: Hue-only nudge (iso-luminant)
+            // Best viewer: HueOnly / HueAmplified
+            encodeHueNudge(imageData, contentData, params) {
+                const data = imageData.data;
+                const content = contentData.data;
+                const strength = params.strength !== undefined ? params.strength : 0.5;
+                const deltaHueMax = (params.deltaHueMax || 6) / 360;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const w = content[i + 3] / 255;
+                    if (w > 0) {
+                        const [h, s, l] = this.rgbToHsl(data[i], data[i + 1], data[i + 2]);
+                        
+                        // Multiply by 3 to make hue shifts more visible (2°→6°, 4°→12°, 6°→18°)
+                        const deltaH = deltaHueMax * strength * w * 3;
+                        const newH = (h + deltaH) % 1;
+                        
+                        const [r, g, b] = this.hslToRgb(newH, s, l);
+                        
+                        data[i] = Math.round(data[i] * (1 - w) + r * w);
+                        data[i + 1] = Math.round(data[i + 1] * (1 - w) + g * w);
+                        data[i + 2] = Math.round(data[i + 2] * (1 - w) + b * w);
+                    }
+                }
+            },
+
+            // E3: Chroma iso-luminant nudge
+            // Best viewer: RedOnly / GreenOnly / BlueOnly
+            encodeChromaIso(imageData, contentData, params) {
+                const data = imageData.data;
+                const content = contentData.data;
+                const strength = params.strength !== undefined ? params.strength : 0.4;
+                const bias = params.bias || 'r';
+                // Increased from 0.02 to 0.04 for better visibility
+                const aMax = 0.04;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const w = content[i + 3] / 255;
+                    if (w > 0) {
+                        let rLin = this.srgb8ToLinear01(data[i]);
+                        let gLin = this.srgb8ToLinear01(data[i + 1]);
+                        let bLin = this.srgb8ToLinear01(data[i + 2]);
+                        
+                        const a = aMax * strength * w;
+                        
+                        if (bias === 'r') {
+                            const deltaG = -(0.2126 / 0.7152) * a;
+                            rLin = Math.max(0, Math.min(1, rLin + a));
+                            gLin = Math.max(0, Math.min(1, gLin + deltaG));
+                        } else if (bias === 'g') {
+                            const deltaR = -(0.7152 / 0.2126) * a;
+                            gLin = Math.max(0, Math.min(1, gLin + a));
+                            rLin = Math.max(0, Math.min(1, rLin + deltaR));
+                        } else {
+                            const deltaR = -(0.0722 / (0.2126 + 0.7152)) * (0.2126 / (0.2126 + 0.7152)) * a;
+                            const deltaG = -(0.0722 / (0.2126 + 0.7152)) * (0.7152 / (0.2126 + 0.7152)) * a;
+                            bLin = Math.max(0, Math.min(1, bLin + a));
+                            rLin = Math.max(0, Math.min(1, rLin + deltaR));
+                            gLin = Math.max(0, Math.min(1, gLin + deltaG));
+                        }
+                        
+                        data[i] = this.linear01ToSrgb8(rLin);
+                        data[i + 1] = this.linear01ToSrgb8(gLin);
+                        data[i + 2] = this.linear01ToSrgb8(bLin);
+                    }
+                }
+            },
+
+            // E4: High-pass watermark (Laplacian)
+            // Best viewer: EdgeDetect / Gradient
+            encodeHighPass(imageData, contentData, params) {
+                const data = imageData.data;
+                const content = contentData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const strength = params.strength !== undefined ? params.strength : 0.6;
+                // Increased for better visibility
+                const kMax = 0.08;
+                
+                // NEW APPROACH: Calculate Laplacian of CONTENT, not base image
+                // This creates edges where text/stroke transitions exist
+                
+                const contentLaplacian = new Float32Array(width * height);
+                
+                // Calculate Laplacian on content brightness
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const idx = y * width + x;
+                        const i = idx * 4;
+                        
+                        // Center pixel brightness
+                        const centerBright = (content[i] + content[i + 1] + content[i + 2]) / (3 * 255);
+                        
+                        // 4-neighbor brightness
+                        let sumBright = 0;
+                        const neighbors = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+                        
+                        for (const [dx, dy] of neighbors) {
+                            const ni = ((y + dy) * width + (x + dx)) * 4;
+                            const nBright = (content[ni] + content[ni + 1] + content[ni + 2]) / (3 * 255);
+                            sumBright += nBright;
+                        }
+                        
+                        // Laplacian: 4*center - sum(neighbors)
+                        contentLaplacian[idx] = 4 * centerBright - sumBright;
+                    }
+                }
+                
+                // Apply the content-based high-pass filter
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const idx = y * width + x;
+                        const i = idx * 4;
+                        const w = content[i + 3] / 255;
+                        
+                        if (w > 0) {
+                            const hp = contentLaplacian[idx];
+                            const k = kMax * strength * w;
+                            
+                            let rLin = this.srgb8ToLinear01(data[i]);
+                            let gLin = this.srgb8ToLinear01(data[i + 1]);
+                            let bLin = this.srgb8ToLinear01(data[i + 2]);
+                            
+                            const luma = this.getLumaLinear(rLin, gLin, bLin);
+                            const newLuma = luma + k * hp;
+                            
+                            if (luma > 0.001) {
+                                const ratio = newLuma / luma;
+                                rLin = Math.max(0, Math.min(1, rLin * ratio));
+                                gLin = Math.max(0, Math.min(1, gLin * ratio));
+                                bLin = Math.max(0, Math.min(1, bLin * ratio));
+                            }
+                            
+                            data[i] = this.linear01ToSrgb8(rLin);
+                            data[i + 1] = this.linear01ToSrgb8(gLin);
+                            data[i + 2] = this.linear01ToSrgb8(bLin);
+                        }
+                    }
+                }
+            },
+
+            // E5: Local contrast watermark
+            // Best viewer: Contrast
+            encodeLocalContrast(imageData, contentData, params) {
+                const data = imageData.data;
+                const content = contentData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const strength = params.strength !== undefined ? params.strength : 0.5;
+                // Increased for better visibility
+                const contrastAmount = (params.gMax || 0.15) * 3.0;
+                
+                // NEW APPROACH: Use content brightness to CREATE local contrast
+                // White text areas get brighter, black stroke areas get darker
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const i = (y * width + x) * 4;
+                        const w = content[i + 3] / 255;
+                        
+                        if (w > 0) {
+                            // Get content brightness (0 = black, 1 = white)
+                            const contentBrightness = (content[i] + content[i + 1] + content[i + 2]) / (3 * 255);
+                            
+                            // Convert to linear
+                            let rLin = this.srgb8ToLinear01(data[i]);
+                            let gLin = this.srgb8ToLinear01(data[i + 1]);
+                            let bLin = this.srgb8ToLinear01(data[i + 2]);
+                            
+                            // Calculate adjustment: 
+                            // contentBrightness = 1 (white) -> increase luma
+                            // contentBrightness = 0 (black) -> decrease luma
+                            // contentBrightness = 0.5 (gray) -> no change
+                            const adjustment = (contentBrightness - 0.5) * 2; // Range: -1 to +1
+                            const lumaDelta = adjustment * contrastAmount * strength * w;
+                            
+                            // Apply luminance shift
+                            const currentLuma = this.getLumaLinear(rLin, gLin, bLin);
+                            const newLuma = Math.max(0.001, currentLuma + lumaDelta);
+                            
+                            if (currentLuma > 0.001) {
+                                const ratio = newLuma / currentLuma;
+                                rLin = Math.max(0, Math.min(1, rLin * ratio));
+                                gLin = Math.max(0, Math.min(1, gLin * ratio));
+                                bLin = Math.max(0, Math.min(1, bLin * ratio));
+                            }
+                            
+                            data[i] = this.linear01ToSrgb8(rLin);
+                            data[i + 1] = this.linear01ToSrgb8(gLin);
+                            data[i + 2] = this.linear01ToSrgb8(bLin);
+                        }
+                    }
+                }
+            },
+
+            // ==================== LIGHTING DETECTION METHODS (from Lucyra) ====================
+
+            brightness(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = Math.min(255, data[i] * params.boost);
+                    data[i + 1] = Math.min(255, data[i + 1] * params.boost);
+                    data[i + 2] = Math.min(255, data[i + 2] * params.boost);
+                }
+            },
+
+            contrast(data, params) {
+                const factor = params.factor;
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = Math.max(0, Math.min(255, (data[i] - 128) * factor + 128));
+                    data[i + 1] = Math.max(0, Math.min(255, (data[i + 1] - 128) * factor + 128));
+                    data[i + 2] = Math.max(0, Math.min(255, (data[i + 2] - 128) * factor + 128));
+                }
+            },
+
+            isolateChannel(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const value = data[i + params.channel];
+                    data[i] = params.channel === 0 ? value : 0;
+                    data[i + 1] = params.channel === 1 ? value : 0;
+                    data[i + 2] = params.channel === 2 ? value : 0;
+                }
+            },
+
+            amplifyChannel(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i + params.channel] = Math.min(255, data[i + params.channel] * params.factor);
+                }
+            },
+
+            invert(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = 255 - data[i];
+                    data[i + 1] = 255 - data[i + 1];
+                    data[i + 2] = 255 - data[i + 2];
+                }
+            },
+
+            invertChannel(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i + params.channel] = 255 - data[i + params.channel];
+                }
+            },
+
+            bitPlane(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const bit = (data[i + params.channel] >> params.bit) & 1;
+                    const value = bit * 255;
+                    data[i] = value;
+                    data[i + 1] = value;
+                    data[i + 2] = value;
+                }
+            },
+
+            colorDifference(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const diff = Math.min(255, Math.abs(data[i + params.ch1] - data[i + params.ch2]) * params.amp);
+                    data[i] = diff;
+                    data[i + 1] = diff;
+                    data[i + 2] = diff;
+                }
+            },
+
+            gradientDetect(data, params) {
+                const width  = (params && params.workingWidth)  || this.canvas.width;
+                const height = (params && params.workingHeight) || this.canvas.height;
+                const tempData = new Uint8ClampedArray(data);
+
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const i = (y * width + x) * 4;
+                        let gx = 0, gy = 0;
+
+                        if (params.direction === 'horizontal' || params.direction === 'both') {
+                            const left = (y * width + x - 1) * 4;
+                            const right = (y * width + x + 1) * 4;
+                            gx = Math.abs(tempData[right] - tempData[left]);
+                        }
+
+                        if (params.direction === 'vertical' || params.direction === 'both') {
+                            const top = ((y - 1) * width + x) * 4;
+                            const bottom = ((y + 1) * width + x) * 4;
+                            gy = Math.abs(tempData[bottom] - tempData[top]);
+                        }
+
+                        const magnitude = Math.min(255, Math.sqrt(gx * gx + gy * gy) * 2);
+                        data[i] = magnitude;
+                        data[i + 1] = magnitude;
+                        data[i + 2] = magnitude;
+                    }
+                }
+            },
+
+            aboveAverage(data, params) {
+                let sum = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    sum += (data[i] + data[i + 1] + data[i + 2]) / 3;
+                }
+                const avg = sum / (data.length / 4);
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    const diff = brightness > avg ? (brightness - avg) * params.boost : 0;
+                    data[i] = Math.min(255, diff);
+                    data[i + 1] = Math.min(255, diff);
+                    data[i + 2] = Math.min(255, diff);
+                }
+            },
+
+            belowAverage(data, params) {
+                let sum = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    sum += (data[i] + data[i + 1] + data[i + 2]) / 3;
+                }
+                const avg = sum / (data.length / 4);
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    const diff = brightness < avg ? (avg - brightness) * params.boost : 0;
+                    data[i] = Math.min(255, diff);
+                    data[i + 1] = Math.min(255, diff);
+                    data[i + 2] = Math.min(255, diff);
+                }
+            },
+
+            hueOnly(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const hsl = this.rgbToHsl(data[i], data[i + 1], data[i + 2]);
+                    const rgb = this.hslToRgb(hsl[0], 1, 0.5);
+                    data[i] = rgb[0];
+                    data[i + 1] = rgb[1];
+                    data[i + 2] = rgb[2];
+                }
+            },
+
+            saturationOnly(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const hsl = this.rgbToHsl(data[i], data[i + 1], data[i + 2]);
+                    const value = hsl[1] * 255;
+                    data[i] = value;
+                    data[i + 1] = value;
+                    data[i + 2] = value;
+                }
+            },
+
+            luminanceOnly(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const hsl = this.rgbToHsl(data[i], data[i + 1], data[i + 2]);
+                    const value = hsl[2] * 255;
+                    data[i] = value;
+                    data[i + 1] = value;
+                    data[i + 2] = value;
+                }
+            },
+
+            hueAmplified(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const hsl = this.rgbToHsl(data[i], data[i + 1], data[i + 2]);
+                    const rgb = this.hslToRgb(hsl[0], Math.min(1, hsl[1] * 2), hsl[2]);
+                    data[i] = rgb[0];
+                    data[i + 1] = rgb[1];
+                    data[i + 2] = rgb[2];
+                }
+            },
+
+            saturationAmplified(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const hsl = this.rgbToHsl(data[i], data[i + 1], data[i + 2]);
+                    const rgb = this.hslToRgb(hsl[0], Math.min(1, hsl[1] * 3), hsl[2]);
+                    data[i] = rgb[0];
+                    data[i + 1] = rgb[1];
+                    data[i + 2] = rgb[2];
+                }
+            },
+
+            xorPattern(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = data[i] ^ params.value;
+                    data[i + 1] = data[i + 1] ^ params.value;
+                    data[i + 2] = data[i + 2] ^ params.value;
+                }
+            },
+
+            edgeDetect(data, params) {
+
+                const width  = (params && params.workingWidth)  || this.canvas.width;
+                const height = (params && params.workingHeight) || this.canvas.height;
+                const tempData = new Uint8ClampedArray(data);
+
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const i = (y * width + x) * 4;
+                        
+                        let gx = 0, gy = 0;
+                        for (let c = 0; c < 3; c++) {
+                            gx += -tempData[((y - 1) * width + x - 1) * 4 + c] +
+                                   tempData[((y - 1) * width + x + 1) * 4 + c] +
+                                  -2 * tempData[(y * width + x - 1) * 4 + c] +
+                                   2 * tempData[(y * width + x + 1) * 4 + c] +
+                                  -tempData[((y + 1) * width + x - 1) * 4 + c] +
+                                   tempData[((y + 1) * width + x + 1) * 4 + c];
+                            
+                            gy += -tempData[((y - 1) * width + x - 1) * 4 + c] +
+                                  -2 * tempData[((y - 1) * width + x) * 4 + c] +
+                                  -tempData[((y - 1) * width + x + 1) * 4 + c] +
+                                   tempData[((y + 1) * width + x - 1) * 4 + c] +
+                                   2 * tempData[((y + 1) * width + x) * 4 + c] +
+                                   tempData[((y + 1) * width + x + 1) * 4 + c];
+                        }
+
+                        const magnitude = Math.min(255, Math.sqrt(gx * gx + gy * gy) * params.threshold / 3);
+                        data[i] = magnitude;
+                        data[i + 1] = magnitude;
+                        data[i + 2] = magnitude;
+                    }
+                }
+            },
+
+            posterize(data, params) {
+                const step = 256 / params.levels;
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = Math.floor(data[i] / step) * step;
+                    data[i + 1] = Math.floor(data[i + 1] / step) * step;
+                    data[i + 2] = Math.floor(data[i + 2] / step) * step;
+                }
+            },
+
+            modulo(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = (data[i] % params.value) * (255 / params.value);
+                    data[i + 1] = (data[i + 1] % params.value) * (255 / params.value);
+                    data[i + 2] = (data[i + 2] % params.value) * (255 / params.value);
+                }
+            },
+
+            threshold(data, params) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    const value = brightness > params.value ? 255 : 0;
+                    data[i] = value;
+                    data[i + 1] = value;
+                    data[i + 2] = value;
+                }
+            },
+
+            gamma(data, params) {
+                const gamma = params.gamma;
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = Math.pow(data[i] / 255, gamma) * 255;
+                    data[i + 1] = Math.pow(data[i + 1] / 255, gamma) * 255;
+                    data[i + 2] = Math.pow(data[i + 2] / 255, gamma) * 255;
+                }
+            },
+
+            colorTemp(data, params) {
+                const temp = params.temp;
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = Math.max(0, Math.min(255, data[i] + temp));
+                    data[i + 2] = Math.max(0, Math.min(255, data[i + 2] - temp));
+                }
+            },
+
+            solarize(data, params) {
+                const level = params.level;
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i] > level) data[i] = 255 - data[i];
+                    if (data[i + 1] > level) data[i + 1] = 255 - data[i + 1];
+                    if (data[i + 2] > level) data[i + 2] = 255 - data[i + 2];
+                }
+            },
+
+            // ==================== UI METHODS ====================
+
+            setupEventListeners() {
+                document.getElementById('base-image-input').addEventListener('change', (e) => this.loadBaseImage(e));
+                
+                const layerImageInput = document.getElementById('layer-image-input');
+                layerImageInput.addEventListener('change', (e) => this.handleLayerImageLoad(e));
+
+                const container = document.getElementById('canvas-container');
+                container.addEventListener('mousedown', (e) => this.handleCanvasMouseDown(e));
+                container.addEventListener('mousemove', (e) => this.handleCanvasMouseMove(e));
+                container.addEventListener('mouseup', (e) => this.handleCanvasMouseUp(e));
+                container.addEventListener('mouseleave', (e) => this.handleCanvasMouseUp(e));
+                container.addEventListener('wheel', (e) => this.handleCanvasWheel(e), { passive: false });
+
+                // Lighting index input
+                const lightingInput = document.getElementById('lighting-index-input');
+                lightingInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const value = parseInt(lightingInput.value);
+                        if (value >= 1 && value <= 177) {
+                            this.currentLightingIndex = value - 1;
+                            this.updateLightingDisplay();
+                            this.render();
+                        }
+                        lightingInput.value = '';
+                        lightingInput.blur();
+                    }
+                });
+
+                window.addEventListener('resize', () => this.resizeCanvas());
+            },
+
+            loadBaseImage(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        this.baseImage = img;
+                        this.scale = 1.0;
+                        this.panX = 0;
+                        this.panY = 0;
+                        this.resizeCanvas();
+                        this.render();
+                        this.showHint('Base image loaded! Add text or images to hide.');
+                        document.getElementById('download-btn').disabled = false;
+                        document.getElementById('preview-toggle-btn').disabled = false;
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            },
+
+            resizeCanvas() {
+                const container = document.getElementById('canvas-container');
+                this.canvas.width = container.clientWidth;
+                this.canvas.height = container.clientHeight;
+                
+                if (this.baseImage) {
+                    this.render();
+                }
+            },
+
+            togglePreviewMode() {
+                if (this.previewMode === 'encoding') {
+                    this.previewMode = 'lighting';
+                    document.getElementById('preview-toggle-btn').textContent = 'Switch to Encoding Preview';
+                    document.getElementById('preview-toggle-btn').classList.add('preview-mode');
+                    document.getElementById('encoding-mode-panel').style.display = 'none';
+                    document.getElementById('lighting-mode-panel').style.display = 'block';
+                    this.updateLightingDisplay();
+                } else {
+                    this.previewMode = 'encoding';
+                    document.getElementById('preview-toggle-btn').textContent = 'Switch to Lighting Preview';
+                    document.getElementById('preview-toggle-btn').classList.remove('preview-mode');
+                    document.getElementById('encoding-mode-panel').style.display = 'block';
+                    document.getElementById('lighting-mode-panel').style.display = 'none';
+                }
+                this.render();
+            },
+
+            updateLightingDisplay() {
+                const effect = this.lightingEffects[this.currentLightingIndex];
+                document.getElementById('lighting-name').textContent = effect.name;
+                document.getElementById('lighting-index').textContent = `${this.currentLightingIndex + 1} / ${this.lightingEffects.length}`;
+            },
+
+            resetView() {
+                this.scale = 1.0;
+                this.panX = 0;
+                this.panY = 0;
+                document.getElementById('zoom-value-lighting').textContent = '100%';
+                this.render();
+                this.showHint('View reset!', 1500);
+            },
+
+            // ==================== RECOMMENDATION SYSTEM ====================
+
+            extractFeatures(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                
+                let lumaSum = 0, lumaSum2 = 0;
+                let minLuma = 1, maxLuma = 0;
+                let gradSum = 0;
+                let chromaSum = 0;
+                let count = 0;
+                
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const i = (y * width + x) * 4;
+                        
+                        const rLin = this.srgb8ToLinear01(data[i]);
+                        const gLin = this.srgb8ToLinear01(data[i + 1]);
+                        const bLin = this.srgb8ToLinear01(data[i + 2]);
+                        const luma = this.getLumaLinear(rLin, gLin, bLin);
+                        
+                        lumaSum += luma;
+                        lumaSum2 += luma * luma;
+                        minLuma = Math.min(minLuma, luma);
+                        maxLuma = Math.max(maxLuma, luma);
+                        
+                        const iRight = i + 4;
+                        const rightLuma = this.getLumaLinear(
+                            this.srgb8ToLinear01(data[iRight]),
+                            this.srgb8ToLinear01(data[iRight + 1]),
+                            this.srgb8ToLinear01(data[iRight + 2])
+                        );
+                        const iDown = i + width * 4;
+                        const downLuma = this.getLumaLinear(
+                            this.srgb8ToLinear01(data[iDown]),
+                            this.srgb8ToLinear01(data[iDown + 1]),
+                            this.srgb8ToLinear01(data[iDown + 2])
+                        );
+                        
+                        const gradX = rightLuma - luma;
+                        const gradY = downLuma - luma;
+                        gradSum += Math.sqrt(gradX * gradX + gradY * gradY);
+                        
+                        const chroma = Math.sqrt((rLin - luma) * (rLin - luma) + 
+                                                 (gLin - luma) * (gLin - luma) + 
+                                                 (bLin - luma) * (bLin - luma));
+                        chromaSum += chroma;
+                        
+                        count++;
+                    }
+                }
+                
+                const lumaMean = lumaSum / count;
+                const lumaVar = (lumaSum2 / count) - (lumaMean * lumaMean);
+                const texture = 1 / (1 + Math.exp(-10 * ((gradSum / count) - 0.05)));
+                
+                return {
+                    lumaMean,
+                    lumaVar,
+                    lumaRange: maxLuma - minLuma,
+                    texture,
+                    chroma: chromaSum / count
+                };
+            },
+
+            generateCandidates(features) {
+                const candidates = [];
+                
+                if (features.texture < 0.3) {
+                    candidates.push({ id: 'bitplane_red_0', strength: 0.5 });
+                    candidates.push({ id: 'hue_1', strength: 0.5 });
+                } else {
+                    candidates.push({ id: 'highpass', strength: 0.6 });
+                    candidates.push({ id: 'contrast_2', strength: 0.5 });
+                }
+                
+                if (features.chroma > 0.05) {
+                    candidates.push({ id: 'chroma_r', strength: 0.4 });
+                    candidates.push({ id: 'hue_2', strength: 0.5 });
+                }
+                
+                if (features.lumaMean < 0.3 || features.lumaMean > 0.7) {
+                    candidates.push({ id: 'bitplane_green_1', strength: 0.6 });
+                }
+                
+                return candidates;
+            },
+
+            async computeRecommendation() {
+                if (!this.selectedLayerId || !this.baseImage) return;
+                
+                const layer = this.layers.find(l => l.id === this.selectedLayerId);
+                if (!layer) return;
+                
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                const patchSize = Math.min(256, Math.max(layer.width, layer.height));
+                tempCanvas.width = patchSize;
+                tempCanvas.height = patchSize;
+                
+                tempCtx.drawImage(
+                    this.baseImage,
+                    layer.x, layer.y, layer.width, layer.height,
+                    0, 0, patchSize, patchSize
+                );
+                
+                const patchData = tempCtx.getImageData(0, 0, patchSize, patchSize);
+                const features = this.extractFeatures(patchData);
+                const candidates = this.generateCandidates(features);
+                
+                let bestCandidate = null;
+                let bestScore = -Infinity;
+                
+                for (const candidate of candidates) {
+                    let score = 0;
+                    const effect = this.stegoEffects.find(e => e.id === candidate.id);
+                    
+                    if (!effect) continue;
+                    
+                    if (candidate.id.startsWith('highpass') || candidate.id.startsWith('contrast')) {
+                        score = features.texture;
+                    } else if (candidate.id.startsWith('hue')) {
+                        score = features.chroma;
+                    } else {
+                        score = 1 - features.texture;
+                    }
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestCandidate = { ...candidate, effect };
+                    }
+                }
+                
+                if (bestCandidate) {
+                    const confidence = bestScore > 0.7 ? 3 : (bestScore > 0.4 ? 2 : 1);
+                    this.recommendation = {
+                        encoder: bestCandidate.effect,
+                        strength: bestCandidate.strength,
+                        bestViewer: bestCandidate.effect.bestViewer,
+                        confidence: confidence
+                    };
+                    this.showRecommendation();
+                }
+            },
+
+            triggerRecommendation() {
+                clearTimeout(this.recommendationDebounce);
+                this.recommendationDebounce = setTimeout(() => {
+                    this.computeRecommendation();
+                }, 150);
+            },
+
+            showRecommendation() {
+                if (!this.recommendation) return;
+                
+                let pill = document.getElementById('recommendation-pill');
+                if (!pill) {
+                    pill = document.createElement('div');
+                    pill.id = 'recommendation-pill';
+                    pill.style.cssText = `
+                        position: absolute;
+                        top: 20px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+                        color: #fff;
+                        padding: 10px 15px;
+                        border-radius: 8px;
+                        font-size: 12px;
+                        cursor: pointer;
+                        box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+                        z-index: 1000;
+                        transition: all 0.3s;
+                    `;
+                    pill.onclick = () => this.applyRecommendation();
+                    document.getElementById('canvas-container').appendChild(pill);
+                }
+                
+                const stars = '★'.repeat(this.recommendation.confidence);
+                pill.innerHTML = `
+                    <div style="font-weight: bold;">✨ Recommended</div>
+                    <div>${this.recommendation.encoder.name} @ ${this.recommendation.strength.toFixed(1)}</div>
+                    <div style="font-size: 10px; margin-top: 4px;">View with: ${this.recommendation.bestViewer}</div>
+                    <div style="font-size: 14px; margin-top: 2px;">${stars}</div>
+                `;
+                
+                pill.style.display = 'block';
+            },
+
+            applyRecommendation() {
+                if (!this.recommendation || !this.selectedLayerId) return;
+                
+                const layer = this.layers.find(l => l.id === this.selectedLayerId);
+                if (!layer) return;
+                
+                const encoderIndex = this.stegoEffects.findIndex(e => e.id === this.recommendation.encoder.id);
+                if (encoderIndex >= 0) {
+                    layer.effectIndex = encoderIndex;
+                    layer.strength = this.recommendation.strength;
+                    this.cachedEncodedImage = null;
+                    this.updateLayersUI();
+                    this.render();
+                    this.showHint(`Applied: ${this.recommendation.encoder.name}. View with "${this.recommendation.bestViewer}"`, 3000);
+                }
+            },
+
+            // ==================== LAYER MANAGEMENT ====================
+
+            addTextLayer() {
+                if (!this.baseImage) {
+                    this.showHint('Please load a base image first!');
+                    return;
+                }
+
+                // Create layer in image coordinate space (center of image)
+                const layer = {
+                    id: this.nextLayerId++,
+                    type: 'text',
+                    content: 'Hidden Text',
+                    x: this.baseImage.width / 2 - 100,
+                    y: this.baseImage.height / 2 - 25,
+                    width: 200,
+                    height: 50,
+                    rotation: 0,
+                    effectIndex: 0,
+                    strength: 1.0, // Default strength
+                    inverted: false
+                };
+
+                this.layers.push(layer);
+                this.selectedLayerId = layer.id;
+                this.cachedEncodedImage = null;
+                this.updateLayersUI();
+                
+                // Trigger recommendation for new layer
+                this.triggerRecommendation();
+                
+                // Force multiple renders to ensure container box appears
+                this.render();
+                setTimeout(() => {
+                    this.render();
+                }, 0);
+                setTimeout(() => {
+                    this.render();
+                }, 50);
+                
+                this.showHint('Text layer added! Scroll over it to change effect.', 2000);
+            },
+
+            addImageLayer() {
+                if (!this.baseImage) {
+                    this.showHint('Please load a base image first!');
+                    return;
+                }
+
+                this.pendingImageLayerId = this.nextLayerId++;
+                document.getElementById('layer-image-input').click();
+            },
+
+            handleLayerImageLoad(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Scale image to fit within base image if too large (in image space)
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDim = Math.min(this.baseImage.width * 0.5, this.baseImage.height * 0.5);
+                        
+                        if (width > maxDim || height > maxDim) {
+                            const scale = maxDim / Math.max(width, height);
+                            width *= scale;
+                            height *= scale;
+                        }
+
+                        // Convert to grayscale and dither at final size
+                        const tempCanvas = document.createElement('canvas');
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCanvas.width = Math.floor(width);
+                        tempCanvas.height = Math.floor(height);
+                        tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+                        
+                        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                        this.convertToBlackAndWhite(imageData);
+                        tempCtx.putImageData(imageData, 0, 0);
+
+                        // Position in image coordinate space
+                        const layer = {
+                            id: this.pendingImageLayerId,
+                            type: 'image',
+                            content: tempCanvas.toDataURL(),
+                            image: tempCanvas,
+                            x: this.baseImage.width / 2 - width / 2,
+                            y: this.baseImage.height / 2 - height / 2,
+                            width: width,
+                            height: height,
+                            rotation: 0,
+                            effectIndex: 0,
+                            strength: 1.0, // Default strength
+                            originalImage: img,
+                            inverted: false
+                        };
+
+                        this.layers.push(layer);
+                        this.selectedLayerId = layer.id;
+                        this.cachedEncodedImage = null;
+                        this.updateLayersUI();
+                        
+                        // Trigger recommendation for new layer
+                        this.triggerRecommendation();
+                        
+                        // Force multiple renders to ensure container box appears
+                        this.render();
+                        setTimeout(() => {
+                            this.render();
+                        }, 0);
+                        setTimeout(() => {
+                            this.render();
+                        }, 50);
+                        
+                        this.showHint('Image layer added! Scroll over it to change effect.', 2000);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+                e.target.value = '';
+            },
+
+            convertToBlackAndWhite(imageData, invert = false) {
+                const data = imageData.data;
+                
+                // Convert to grayscale
+                for (let i = 0; i < data.length; i += 4) {
+                    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                    data[i] = gray;
+                    data[i + 1] = gray;
+                    data[i + 2] = gray;
+                }
+                
+                // Floyd-Steinberg dithering
+                for (let y = 0; y < imageData.height; y++) {
+                    for (let x = 0; x < imageData.width; x++) {
+                        const i = (y * imageData.width + x) * 4;
+                        const oldPixel = data[i];
+                        let newPixel = oldPixel > 128 ? 255 : 0;
+                        
+                        // Invert if requested
+                        if (invert) {
+                            newPixel = 255 - newPixel;
+                        }
+                        
+                        data[i] = newPixel;
+                        data[i + 1] = newPixel;
+                        data[i + 2] = newPixel;
+                        
+                        const error = oldPixel - (invert ? 255 - newPixel : newPixel);
+                        
+                        if (x + 1 < imageData.width) {
+                            const ri = i + 4;
+                            data[ri] += error * 7/16;
+                            data[ri + 1] += error * 7/16;
+                            data[ri + 2] += error * 7/16;
+                        }
+                        if (y + 1 < imageData.height) {
+                            if (x > 0) {
+                                const bli = i + imageData.width * 4 - 4;
+                                data[bli] += error * 3/16;
+                                data[bli + 1] += error * 3/16;
+                                data[bli + 2] += error * 3/16;
+                            }
+                            const bi = i + imageData.width * 4;
+                            data[bi] += error * 5/16;
+                            data[bi + 1] += error * 5/16;
+                            data[bi + 2] += error * 5/16;
+                            
+                            if (x + 1 < imageData.width) {
+                                const bri = i + imageData.width * 4 + 4;
+                                data[bri] += error * 1/16;
+                                data[bri + 1] += error * 1/16;
+                                data[bri + 2] += error * 1/16;
+                            }
+                        }
+                    }
+                }
+            },
+
+            updateLayersUI() {
+                const container = document.getElementById('layers-container');
+                container.innerHTML = '';
+
+                this.layers.forEach((layer, index) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'layer-item' + (layer.id === this.selectedLayerId ? ' selected' : '');
+
+                    // Header with radio, content, delete
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = 'layer-header';
+                    headerDiv.onclick = (e) => {
+                        if (!e.target.classList.contains('delete-btn') && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                            this.selectLayer(layer.id);
+                        }
+                    };
+
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'layer';
+                    radio.checked = layer.id === this.selectedLayerId;
+                    radio.onchange = () => this.selectLayer(layer.id);
+
+                    if (layer.type === 'text') {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = layer.content;
+                        textarea.onclick = (e) => e.stopPropagation();
+                        textarea.oninput = (e) => {
+                            layer.content = e.target.value;
+                            this.cachedEncodedImage = null;
+                            this.render();
+                        };
+                        headerDiv.appendChild(radio);
+                        headerDiv.appendChild(textarea);
+                    } else {
+                        const label = document.createElement('span');
+                        label.textContent = `Image ${index + 1}`;
+                        label.style.flex = '1';
+                        headerDiv.appendChild(radio);
+                        headerDiv.appendChild(label);
+                    }
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        this.deleteLayer(layer.id);
+                    };
+                    headerDiv.appendChild(deleteBtn);
+
+                    // Controls - First row
+                    const controlsDiv = document.createElement('div');
+                    controlsDiv.className = 'layer-controls';
+                    controlsDiv.style.display = 'flex';
+                    controlsDiv.style.flexDirection = 'column';
+                    controlsDiv.style.gap = '5px';
+                    
+                    const firstRow = document.createElement('div');
+                    firstRow.style.display = 'flex';
+                    firstRow.style.alignItems = 'center';
+                    firstRow.style.gap = '5px';
+                    
+                    const effectLabel = document.createElement('label');
+                    effectLabel.textContent = 'Effect #:';
+                    effectLabel.style.minWidth = '55px';
+                    
+                    const effectInput = document.createElement('input');
+                    effectInput.type = 'number';
+                    effectInput.min = '1';
+                    effectInput.max = '17';
+                    effectInput.value = layer.effectIndex + 1;
+                    effectInput.onclick = (e) => e.stopPropagation();
+                    effectInput.onchange = (e) => {
+                        const val = parseInt(e.target.value);
+                        if (val >= 1 && val <= 17) {
+                            layer.effectIndex = val - 1;
+                            this.cachedEncodedImage = null;
+                            this.updateLayersUI();
+                            this.render();
+                        }
+                    };
+                    
+                    firstRow.appendChild(effectLabel);
+                    firstRow.appendChild(effectInput);
+                    
+                    // Strength control
+                    const strengthLabel = document.createElement('label');
+                    strengthLabel.textContent = 'Strength:';
+                    strengthLabel.style.marginLeft = '5px';
+                    
+                    const strengthInput = document.createElement('input');
+                    strengthInput.type = 'number';
+                    strengthInput.min = '0';
+                    strengthInput.max = '1';
+                    strengthInput.step = '0.1';
+                    strengthInput.value = layer.strength !== undefined ? layer.strength.toFixed(1) : '1.0';
+                    strengthInput.style.width = '50px';
+                    strengthInput.onclick = (e) => e.stopPropagation();
+                    strengthInput.onchange = (e) => {
+                        const val = parseFloat(e.target.value);
+                        if (val >= 0 && val <= 1) {
+                            layer.strength = val;
+                            this.cachedEncodedImage = null;
+                            this.render();
+                        }
+                    };
+                    
+                    firstRow.appendChild(strengthLabel);
+                    firstRow.appendChild(strengthInput);
+                    
+                    controlsDiv.appendChild(firstRow);
+                    
+                    // Second row - Invert button
+                    const secondRow = document.createElement('div');
+                    secondRow.style.display = 'flex';
+                    secondRow.style.alignItems = 'center';
+                    
+                    const invertBtn = document.createElement('button');
+                    invertBtn.textContent = layer.inverted ? 'Inverted' : 'Normal';
+                    invertBtn.style.width = '100px';
+                    invertBtn.style.padding = '4px 8px';
+                    invertBtn.style.fontSize = '10px';
+                    invertBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        layer.inverted = !layer.inverted;
+                        this.cachedEncodedImage = null;
+                        
+                        // If it's an image layer, regenerate the dithered image with inverted colors
+                        if (layer.type === 'image' && layer.originalImage) {
+                            const tempCanvas = document.createElement('canvas');
+                            const tempCtx = tempCanvas.getContext('2d');
+                            tempCanvas.width = Math.floor(layer.width);
+                            tempCanvas.height = Math.floor(layer.height);
+                            tempCtx.drawImage(layer.originalImage, 0, 0, tempCanvas.width, tempCanvas.height);
+                            
+                            const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                            this.convertToBlackAndWhite(imageData, layer.inverted);
+                            tempCtx.putImageData(imageData, 0, 0);
+                            
+                            layer.image = tempCanvas;
+                            layer.content = tempCanvas.toDataURL();
+                        }
+                        
+                        this.updateLayersUI();
+                        this.render();
+                    };
+                    secondRow.appendChild(invertBtn);
+                    controlsDiv.appendChild(secondRow);
+
+                    // Effect name and recommended viewer
+                    const effectName = document.createElement('div');
+                    effectName.className = 'effect-name';
+                    const effect = this.stegoEffects[layer.effectIndex];
+                    effectName.innerHTML = `<strong>${effect.name}</strong><br><small style="color: #aaa;">Best Viewer: ${effect.bestViewer}</small>`;
+                    
+                    itemDiv.appendChild(headerDiv);
+                    itemDiv.appendChild(controlsDiv);
+                    itemDiv.appendChild(effectName);
+                    container.appendChild(itemDiv);
+                });
+            },
+
+            selectLayer(id) {
+                this.selectedLayerId = id;
+                this.updateLayersUI();
+                this.render();
+            },
+
+            deleteLayer(id) {
+                this.layers = this.layers.filter(l => l.id !== id);
+                if (this.selectedLayerId === id) {
+                    this.selectedLayerId = this.layers.length > 0 ? this.layers[0].id : null;
+                }
+                this.cachedEncodedImage = null;
+                this.updateLayersUI();
+                this.render();
+            },
+
+            handleCanvasMouseDown(e) {
+                if (e.button !== 0) return; // Only left click
+
+                const rect = this.canvas.getBoundingClientRect();
+                const canvasX = e.clientX - rect.left;
+                const canvasY = e.clientY - rect.top;
+                
+                // Convert to view space (accounting for pan and zoom)
+                const viewX = (canvasX - this.panX) / this.scale;
+                const viewY = (canvasY - this.panY) / this.scale;
+                
+                // Convert to image space
+                const imgCoords = this.canvasToImage(viewX, viewY);
+                const x = imgCoords.x;
+                const y = imgCoords.y;
+
+                // In lighting mode or with Ctrl, always pan
+                if (this.previewMode === 'lighting' || e.ctrlKey) {
+                    this.isPanning = true;
+                    this.panStartX = e.clientX;
+                    this.panStartY = e.clientY;
+                    this.lastPanX = this.panX;
+                    this.lastPanY = this.panY;
+                    document.getElementById('canvas-container').classList.add('dragging');
+                    return;
+                }
+
+                // In encoding mode, check if clicking on selected layer
+                if (this.selectedLayerId !== null) {
+                    const layer = this.layers.find(l => l.id === this.selectedLayerId);
+                    if (layer) {
+                        const cx = layer.x + layer.width / 2;
+                        const cy = layer.y + layer.height / 2;
+                        
+                        // Check rotation handle first (in image space)
+                        const rotHandleX = cx;
+                        const rotHandleY = layer.y - 20;
+                        const rotCos = Math.cos(layer.rotation);
+                        const rotSin = Math.sin(layer.rotation);
+                        const rhx = rotHandleX - cx;
+                        const rhy = rotHandleY - cy;
+                        const rotatedRHX = rhx * rotCos - rhy * rotSin + cx;
+                        const rotatedRHY = rhx * rotSin + rhy * rotCos + cy;
+                        
+                        if (Math.abs(x - rotatedRHX) < 15 && Math.abs(y - rotatedRHY) < 15) {
+                            this.isRotating = true;
+                            this.rotationCenter = { x: cx, y: cy };
+                            this.initialRotation = layer.rotation;
+                            this.initialAngle = Math.atan2(y - cy, x - cx);
+                            return;
+                        }
+
+                        // Transform point to layer's local coordinate system
+                        const cos = Math.cos(-layer.rotation);
+                        const sin = Math.sin(-layer.rotation);
+                        const dx = x - cx;
+                        const dy = y - cy;
+                        const localX = dx * cos - dy * sin + cx;
+                        const localY = dx * sin + dy * cos + cy;
+
+                        // Check resize handle
+                        const handleSize = 15;
+                        if (localX >= layer.x + layer.width - handleSize && 
+                            localX <= layer.x + layer.width &&
+                            localY >= layer.y + layer.height - handleSize && 
+                            localY <= layer.y + layer.height) {
+                            this.isResizing = true;
+                            this.resizeStartX = localX;
+                            this.resizeStartY = localY;
+                            this.resizeStartWidth = layer.width;
+                            this.resizeStartHeight = layer.height;
+                            this.maintainAspect = e.shiftKey;
+                            this.originalAspect = layer.width / layer.height;
+                            return;
+                        }
+
+                        // Check if inside box
+                        if (localX >= layer.x && localX <= layer.x + layer.width &&
+                            localY >= layer.y && localY <= layer.y + layer.height) {
+                            this.isDragging = true;
+                            this.dragOffsetX = x - layer.x;
+                            this.dragOffsetY = y - layer.y;
+                            return;
+                        }
+                    }
+                }
+
+                // If not clicking on layer, pan
+                this.isPanning = true;
+                this.panStartX = e.clientX;
+                this.panStartY = e.clientY;
+                this.lastPanX = this.panX;
+                this.lastPanY = this.panY;
+                document.getElementById('canvas-container').classList.add('dragging');
+            },
+
+            handleCanvasMouseMove(e) {
+                if (this.isPanning) {
+                    const dx = e.clientX - this.panStartX;
+                    const dy = e.clientY - this.panStartY;
+                    this.panX = this.lastPanX + dx;
+                    this.panY = this.lastPanY + dy;
+                    this.render();
+                    return;
+                }
+
+                if (this.selectedLayerId === null) return;
+                if (!this.isDragging && !this.isResizing && !this.isRotating) return;
+
+                const rect = this.canvas.getBoundingClientRect();
+                const canvasX = e.clientX - rect.left;
+                const canvasY = e.clientY - rect.top;
+                
+                // Convert to view space
+                const viewX = (canvasX - this.panX) / this.scale;
+                const viewY = (canvasY - this.panY) / this.scale;
+                
+                // Convert to image space
+                const imgCoords = this.canvasToImage(viewX, viewY);
+                const x = imgCoords.x;
+                const y = imgCoords.y;
+
+                const layer = this.layers.find(l => l.id === this.selectedLayerId);
+                if (!layer) return;
+
+                if (this.isDragging) {
+                    layer.x = x - this.dragOffsetX;
+                    layer.y = y - this.dragOffsetY;
+                    this.cachedEncodedImage = null;
+                    this.render();
+                } else if (this.isResizing) {
+                    // Transform mouse to layer space
+                    const cx = layer.x + layer.width / 2;
+                    const cy = layer.y + layer.height / 2;
+                    const cos = Math.cos(-layer.rotation);
+                    const sin = Math.sin(-layer.rotation);
+                    const dx = x - cx;
+                    const dy = y - cy;
+                    const localX = dx * cos - dy * sin + cx;
+                    const localY = dx * sin + dy * cos + cy;
+                    
+                    const deltaX = localX - this.resizeStartX;
+                    const deltaY = localY - this.resizeStartY;
+                    
+                    let newWidth = Math.max(20, this.resizeStartWidth + deltaX);
+                    let newHeight = Math.max(15, this.resizeStartHeight + deltaY);
+                    
+                    // Maintain aspect ratio if shift is held
+                    if (this.maintainAspect || e.shiftKey) {
+                        const aspectRatio = this.originalAspect;
+                        // Use the larger dimension change
+                        if (Math.abs(deltaX) > Math.abs(deltaY / aspectRatio)) {
+                            newHeight = newWidth / aspectRatio;
+                        } else {
+                            newWidth = newHeight * aspectRatio;
+                        }
+                        newWidth = Math.max(20, newWidth);
+                        newHeight = Math.max(15, newHeight);
+                    }
+                    
+                    // If image layer, re-dither at new size
+                    if (layer.type === 'image' && layer.originalImage) {
+                        const tempCanvas = document.createElement('canvas');
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCanvas.width = Math.floor(newWidth);
+                        tempCanvas.height = Math.floor(newHeight);
+                        tempCtx.drawImage(layer.originalImage, 0, 0, tempCanvas.width, tempCanvas.height);
+                        
+                        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                        this.convertToBlackAndWhite(imageData, layer.inverted);
+                        tempCtx.putImageData(imageData, 0, 0);
+                        
+                        layer.image = tempCanvas;
+                        layer.content = tempCanvas.toDataURL();
+                    }
+                    
+                    layer.width = newWidth;
+                    layer.height = newHeight;
+                    this.cachedEncodedImage = null;
+                    this.render();
+                } else if (this.isRotating) {
+                    const cx = this.rotationCenter.x;
+                    const cy = this.rotationCenter.y;
+                    const currentAngle = Math.atan2(y - cy, x - cx);
+                    layer.rotation = this.initialRotation + (currentAngle - this.initialAngle);
+                    this.cachedEncodedImage = null;
+                    this.render();
+                }
+            },
+
+            handleCanvasMouseUp(e) {
+                const wasTransforming = this.isDragging || this.isResizing || this.isRotating;
+                this.isDragging = false;
+                this.isResizing = false;
+                this.isRotating = false;
+                this.isPanning = false;
+                document.getElementById('canvas-container').classList.remove('dragging');
+                
+                // Trigger recommendation after layer transform
+                if (wasTransforming && this.selectedLayerId) {
+                    this.triggerRecommendation();
+                }
+            },
+
+            handleCanvasWheel(e) {
+                e.preventDefault();
+
+                if (e.ctrlKey) {
+                    // Zoom
+                    const rect = this.canvas.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    
+                    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                    const oldScale = this.scale;
+                    this.scale = Math.max(0.1, Math.min(10, this.scale * zoomFactor));
+                    
+                    // Zoom towards mouse
+                    this.panX = mouseX - (mouseX - this.panX) * (this.scale / oldScale);
+                    this.panY = mouseY - (mouseY - this.panY) * (this.scale / oldScale);
+                    
+                    const zoomText = Math.round(this.scale * 100) + '%';
+                    document.getElementById('zoom-value-lighting').textContent = zoomText;
+                    this.render();
+                    return;
+                }
+
+                if (this.previewMode === 'lighting') {
+                    // Change lighting effect
+                    if (e.altKey) {
+                        // Jump through effect groups with wrapping
+                        if (e.deltaY < 0) {
+                            // Next group
+                            let found = false;
+                            for (let i = 0; i < this.effectGroups.length; i++) {
+                                if (this.effectGroups[i] > this.currentLightingIndex) {
+                                    this.currentLightingIndex = this.effectGroups[i];
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) {
+                                // Wrap to first
+                                this.currentLightingIndex = 0;
+                            }
+                        } else {
+                            // Previous group
+                            let found = false;
+                            for (let i = this.effectGroups.length - 1; i >= 0; i--) {
+                                if (this.effectGroups[i] < this.currentLightingIndex) {
+                                    this.currentLightingIndex = this.effectGroups[i];
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) {
+                                // Wrap to last
+                                this.currentLightingIndex = this.lightingEffects.length - 1;
+                            }
+                        }
+                    } else {
+                        // Regular scroll with wrapping
+                        if (e.deltaY < 0) {
+                            this.currentLightingIndex = (this.currentLightingIndex + 1) % this.lightingEffects.length;
+                        } else {
+                            this.currentLightingIndex = (this.currentLightingIndex - 1 + this.lightingEffects.length) % this.lightingEffects.length;
+                        }
+                    }
+                    this.updateLightingDisplay();
+                    this.render();
+                    return;
+                }
+
+                // Encoding mode - change layer effect
+                if (this.selectedLayerId === null) return;
+
+                const layer = this.layers.find(l => l.id === this.selectedLayerId);
+                if (!layer) return;
+
+                const rect = this.canvas.getBoundingClientRect();
+                const canvasX = e.clientX - rect.left;
+                const canvasY = e.clientY - rect.top;
+                
+                // Convert to view space
+                const viewX = (canvasX - this.panX) / this.scale;
+                const viewY = (canvasY - this.panY) / this.scale;
+                
+                // Convert to image space
+                const imgCoords = this.canvasToImage(viewX, viewY);
+                const x = imgCoords.x;
+                const y = imgCoords.y;
+
+                // Transform to layer space
+                const cx = layer.x + layer.width / 2;
+                const cy = layer.y + layer.height / 2;
+                const cos = Math.cos(-layer.rotation);
+                const sin = Math.sin(-layer.rotation);
+                const dx = x - cx;
+                const dy = y - cy;
+                const localX = dx * cos - dy * sin + cx;
+                const localY = dx * sin + dy * cos + cy;
+
+                if (localX >= layer.x && localX <= layer.x + layer.width &&
+                    localY >= layer.y && localY <= layer.y + layer.height) {
+                    
+                    if (e.deltaY < 0) {
+                        layer.effectIndex = (layer.effectIndex + 1) % this.stegoEffects.length;
+                    } else {
+                        layer.effectIndex = (layer.effectIndex - 1 + this.stegoEffects.length) % this.stegoEffects.length;
+                    }
+
+                    this.cachedEncodedImage = null; // Invalidate cache immediately
+                    this.updateLayersUI();
+                    this.render(); // Render immediately
+                    this.showHint(this.stegoEffects[layer.effectIndex].name);
+                }
+            },
+
+            generateEncodedImage() {
+                if (!this.baseImage) return null;
+
+                // Create output canvas at base image size
+                const outputCanvas = document.createElement('canvas');
+                const outputCtx = outputCanvas.getContext('2d');
+                outputCanvas.width = this.baseImage.width;
+                outputCanvas.height = this.baseImage.height;
+
+                // Draw base image
+                outputCtx.drawImage(this.baseImage, 0, 0);
+                const outputData = outputCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
+
+                // Apply each layer (layer coordinates are already in image space)
+                this.layers.forEach(layer => {
+                    const contentCanvas = document.createElement('canvas');
+                    const contentCtx = contentCanvas.getContext('2d');
+                    contentCanvas.width = outputCanvas.width;
+                    contentCanvas.height = outputCanvas.height;
+                    
+                    contentCtx.save();
+                    const cx = layer.x + layer.width / 2;
+                    const cy = layer.y + layer.height / 2;
+                    contentCtx.translate(cx, cy);
+                    contentCtx.rotate(layer.rotation);
+                    contentCtx.translate(-cx, -cy);
+
+                    // Font setup
+                    contentCtx.font = `bold ${Math.max(6, Math.floor(layer.height / 3))}px Arial`;
+                    contentCtx.textAlign = 'center';
+                    contentCtx.textBaseline = 'middle';
+
+                    if (layer.type === 'text') {
+                        const lines = layer.content.split('\n');
+                        const lineHeight = layer.height / (lines.length + 1);
+                        const startY = layer.y + lineHeight;
+                        
+                        // For LSB effects: need RGB contrast between stroke and fill
+                        // For Hue/Chroma effects: need alpha only where text is
+                        // Solution: Use strokeText for contrast edge, fillText for text body
+                        
+                        const strokeColor = layer.inverted ? 'white' : 'black';
+                        const fillColor = layer.inverted ? 'black' : 'white';
+                        
+                        contentCtx.strokeStyle = strokeColor;
+                        contentCtx.fillStyle = fillColor;
+                        contentCtx.lineWidth = 3; // Thin contrasting edge
+                        contentCtx.lineJoin = 'round';
+                        
+                        lines.forEach((line, i) => {
+                            const textX = layer.x + layer.width / 2;
+                            const textY = startY + i * lineHeight;
+                            
+                            // Draw stroke first (creates contrasting edge)
+                            contentCtx.strokeText(line, textX, textY, layer.width - 20);
+                            // Draw fill on top (main text)
+                            contentCtx.fillText(line, textX, textY, layer.width - 20);
+                        });
+                    } else if (layer.type === 'image' && layer.image) {
+                        contentCtx.drawImage(layer.image, layer.x, layer.y, layer.width, layer.height);
+                    }
+                    
+                    contentCtx.restore();
+
+                    const contentData = contentCtx.getImageData(0, 0, contentCanvas.width, contentCanvas.height);
+
+                    // Apply steganography effect with layer strength
+                    const effect = this.stegoEffects[layer.effectIndex];
+                    const paramsWithStrength = { ...effect.params, strength: layer.strength !== undefined ? layer.strength : 1.0 };
+                    effect.encode.call(this, outputData, contentData, paramsWithStrength);
+                });
+
+                // Put encoded data back
+                outputCtx.putImageData(outputData, 0, 0);
+                return outputCanvas;
+            },
+
+            render() {
+                if (!this.baseImage) return;
+
+                this.ctx.save();
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Apply zoom and pan
+                this.ctx.translate(this.panX, this.panY);
+                this.ctx.scale(this.scale, this.scale);
+
+                if (this.previewMode === 'lighting') {
+                  if (!this.cachedEncodedImage && this.layers.length > 0) {
+                    this.cachedEncodedImage = this.generateEncodedImage();
+                  }
+                
+                  if (this.cachedEncodedImage) {
+                      // 1) Process at the encoded image�s native resolution
+                      const srcW = this.cachedEncodedImage.width;
+                      const srcH = this.cachedEncodedImage.height;
+                  
+                      const work = document.createElement('canvas');
+                      work.width = srcW;
+                      work.height = srcH;
+                      const wctx = work.getContext('2d', { willReadFrequently: true });
+                      wctx.drawImage(this.cachedEncodedImage, 0, 0);
+                  
+                      const img = wctx.getImageData(0, 0, srcW, srcH);
+                      const effect = this.lightingEffects[this.currentLightingIndex];
+                      const params = { ...effect.params, workingWidth: srcW, workingHeight: srcH }; // pass dims
+                      effect.apply.call(this, img.data, params);
+                      wctx.putImageData(img, 0, 0);
+                  
+                      // 2) Now scale the processed result to the display canvas
+                      const imgAspect = srcW / srcH;
+                      const canvasAspect = this.canvas.width / this.canvas.height;
+                      let drawW, drawH, drawX, drawY;
+                      if (imgAspect > canvasAspect) {
+                        drawW = this.canvas.width;
+                        drawH = drawW / imgAspect;
+                        drawX = 0;
+                        drawY = (this.canvas.height - drawH) / 2;
+                      } else {
+                        drawH = this.canvas.height;
+                        drawW = drawH * imgAspect;
+                        drawY = 0;
+                        drawX = (this.canvas.width - drawW) / 2;
+                      }
+                      this.ctx.drawImage(work, drawX, drawY, drawW, drawH);
+                    } else {
+                        // No layers yet, just show base image
+                        const imgAspect = this.baseImage.width / this.baseImage.height;
+                        const canvasAspect = this.canvas.width / this.canvas.height;
+                        let drawW, drawH, drawX, drawY;
+                        
+                        if (imgAspect > canvasAspect) {
+                            drawW = this.canvas.width;
+                            drawH = drawW / imgAspect;
+                            drawX = 0;
+                            drawY = (this.canvas.height - drawH) / 2;
+                        } else {
+                            drawH = this.canvas.height;
+                            drawW = drawH * imgAspect;
+                            drawY = 0;
+                            drawX = (this.canvas.width - drawW) / 2;
+                        }
+                        
+                        this.ctx.drawImage(this.baseImage, drawX, drawY, drawW, drawH);
+                    }
+                } else {
+                    // Encoding mode - show preview with effects applied
+                    if (!this.cachedEncodedImage && this.layers.length > 0) {
+                        this.cachedEncodedImage = this.generateEncodedImage();
+                    }
+                    
+                    if (this.cachedEncodedImage) {
+                        const imgAspect = this.cachedEncodedImage.width / this.cachedEncodedImage.height;
+                        const canvasAspect = this.canvas.width / this.canvas.height;
+                        let drawW, drawH, drawX, drawY;
+                        
+                        if (imgAspect > canvasAspect) {
+                            drawW = this.canvas.width;
+                            drawH = drawW / imgAspect;
+                            drawX = 0;
+                            drawY = (this.canvas.height - drawH) / 2;
+                        } else {
+                            drawH = this.canvas.height;
+                            drawW = drawH * imgAspect;
+                            drawY = 0;
+                            drawX = (this.canvas.width - drawW) / 2;
+                        }
+                        
+                        this.ctx.drawImage(this.cachedEncodedImage, drawX, drawY, drawW, drawH);
+                    } else {
+                        // No layers yet, just show base image
+                        const imgAspect = this.baseImage.width / this.baseImage.height;
+                        const canvasAspect = this.canvas.width / this.canvas.height;
+                        let drawW, drawH, drawX, drawY;
+                        
+                        if (imgAspect > canvasAspect) {
+                            drawW = this.canvas.width;
+                            drawH = drawW / imgAspect;
+                            drawX = 0;
+                            drawY = (this.canvas.height - drawH) / 2;
+                        } else {
+                            drawH = this.canvas.height;
+                            drawW = drawH * imgAspect;
+                            drawY = 0;
+                            drawX = (this.canvas.width - drawW) / 2;
+                        }
+                        
+                        this.ctx.drawImage(this.baseImage, drawX, drawY, drawW, drawH);
+                    }
+
+                    // Draw container boxes for selected layer
+                    if (this.selectedLayerId !== null) {
+                        const layer = this.layers.find(l => l.id === this.selectedLayerId);
+                        if (layer) {
+                            // Get transform from image coords to canvas coords
+                            const transform = this.getImageToCanvasTransform();
+                            
+                            this.ctx.save();
+                            
+                            // Transform layer coordinates to canvas display coordinates
+                            const displayX = layer.x * transform.scale + transform.offsetX;
+                            const displayY = layer.y * transform.scale + transform.offsetY;
+                            const displayWidth = layer.width * transform.scale;
+                            const displayHeight = layer.height * transform.scale;
+                            
+                            const cx = displayX + displayWidth / 2;
+                            const cy = displayY + displayHeight / 2;
+                            this.ctx.translate(cx, cy);
+                            this.ctx.rotate(layer.rotation);
+                            this.ctx.translate(-cx, -cy);
+                            
+                            // Border
+                            this.ctx.strokeStyle = '#ff00d4';
+                            this.ctx.lineWidth = 2 / this.scale;
+                            this.ctx.setLineDash([5 / this.scale, 5 / this.scale]);
+                            this.ctx.strokeRect(displayX, displayY, displayWidth, displayHeight);
+                            this.ctx.setLineDash([]);
+
+                            // Resize handle
+                            this.ctx.fillStyle = '#ff00d4';
+                            this.ctx.fillRect(displayX + displayWidth - 15, displayY + displayHeight - 15, 15, 15);
+                            
+                            // Rotation handle
+                            this.ctx.beginPath();
+                            this.ctx.arc(displayX + displayWidth / 2, displayY - 20, 8, 0, Math.PI * 2);
+                            this.ctx.fill();
+                            this.ctx.strokeStyle = '#fff';
+                            this.ctx.lineWidth = 2 / this.scale;
+                            this.ctx.stroke();
+                            
+                            this.ctx.restore();
+                        }
+                    }
+                }
+
+                this.ctx.restore();
+            },
+
+            downloadImage() {
+                if (!this.baseImage || this.layers.length === 0) {
+                    this.showHint('Add at least one hidden layer first!');
+                    return;
+                }
+
+                this.showHint('Encoding hidden data...', 2000);
+
+                setTimeout(() => {
+                    const outputCanvas = this.generateEncodedImage();
+                    if (!outputCanvas) return;
+
+                    outputCanvas.toBlob((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'inknigma_encoded.png';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        this.showHint('Image downloaded! Test with Lucyra.', 3000);
+                    });
+                }, 100);
+            },
+
+            showHint(text, duration = 2000) {
+                const hint = document.getElementById('hint');
+                hint.textContent = text;
+                hint.classList.add('visible');
+
+                if (duration > 0) {
+                    setTimeout(() => {
+                        hint.classList.remove('visible');
+                    }, duration);
+                }
+            }
+        };
+
+        // ============================================================================
+        // LICENSE MODAL
+        // ============================================================================
+        const licenseLink = document.getElementById('licenseLink');
+        const licenseLinkLighting = document.getElementById('licenseLinkLighting');
+        const licenseOverlay = document.getElementById('licenseOverlay');
+        const licenseModal = document.getElementById('licenseModal');
+        const licenseClose = document.getElementById('licenseClose');
+
+        function openLicense() {
+          licenseOverlay.classList.add('show');
+          licenseModal.classList.add('show');
+        }
+
+        function closeLicense() {
+          licenseOverlay.classList.remove('show');
+          licenseModal.classList.remove('show');
+        }
+
+        licenseLink.addEventListener('click', openLicense);
+        licenseLinkLighting.addEventListener('click', openLicense);
+        licenseOverlay.addEventListener('click', closeLicense);
+        licenseClose.addEventListener('click', closeLicense);
+
+
+        window.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>
