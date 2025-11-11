@@ -638,9 +638,7 @@
             lightingEffects: [],
             effectGroups: [],
 
-            // Recommendation system
-            recommendation: null,
-            recommendationDebounce: null,
+            // Recommendation system (removed)
 
             // Calculate the transform from base image coordinates to canvas display coordinates
             getImageToCanvasTransform() {
@@ -1552,6 +1550,7 @@
                             this.currentLightingIndex = value - 1;
                             this.updateLightingDisplay();
                             this.render();
+                            this.updateInfoPanel();
                         }
                         lightingInput.value = '';
                         lightingInput.blur();
@@ -1602,12 +1601,14 @@
                     document.getElementById('encoding-mode-panel').style.display = 'none';
                     document.getElementById('lighting-mode-panel').style.display = 'block';
                     this.updateLightingDisplay();
+                    this.updateInfoPanel();
                 } else {
                     this.previewMode = 'encoding';
                     document.getElementById('preview-toggle-btn').textContent = 'Switch to Lighting Preview';
                     document.getElementById('preview-toggle-btn').classList.remove('preview-mode');
                     document.getElementById('encoding-mode-panel').style.display = 'block';
                     document.getElementById('lighting-mode-panel').style.display = 'none';
+                    this.updateInfoPanel();
                 }
                 this.render();
             },
@@ -1616,6 +1617,8 @@
                 const effect = this.lightingEffects[this.currentLightingIndex];
                 document.getElementById('lighting-name').textContent = effect.name;
                 document.getElementById('lighting-index').textContent = `${this.currentLightingIndex + 1} / ${this.lightingEffects.length}`;
+                // Keep INFO panel in sync while browsing filters
+                this.updateInfoPanel();
             },
 
             resetView() {
@@ -1716,123 +1719,13 @@
                 return candidates;
             },
 
-            async computeRecommendation() {
-                if (!this.selectedLayerId || !this.baseImage) return;
-                
-                const layer = this.layers.find(l => l.id === this.selectedLayerId);
-                if (!layer) return;
-                
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-                const patchSize = Math.min(256, Math.max(layer.width, layer.height));
-                tempCanvas.width = patchSize;
-                tempCanvas.height = patchSize;
-                
-                tempCtx.drawImage(
-                    this.baseImage,
-                    layer.x, layer.y, layer.width, layer.height,
-                    0, 0, patchSize, patchSize
-                );
-                
-                const patchData = tempCtx.getImageData(0, 0, patchSize, patchSize);
-                const features = this.extractFeatures(patchData);
-                const candidates = this.generateCandidates(features);
-                
-                let bestCandidate = null;
-                let bestScore = -Infinity;
-                
-                for (const candidate of candidates) {
-                    let score = 0;
-                    const effect = this.stegoEffects.find(e => e.id === candidate.id);
-                    
-                    if (!effect) continue;
-                    
-                    if (candidate.id.startsWith('highpass') || candidate.id.startsWith('contrast')) {
-                        score = features.texture;
-                    } else if (candidate.id.startsWith('hue')) {
-                        score = features.chroma;
-                    } else {
-                        score = 1 - features.texture;
-                    }
-                    
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestCandidate = { ...candidate, effect };
-                    }
-                }
-                
-                if (bestCandidate) {
-                    const confidence = bestScore > 0.7 ? 3 : (bestScore > 0.4 ? 2 : 1);
-                    this.recommendation = {
-                        encoder: bestCandidate.effect,
-                        strength: bestCandidate.strength,
-                        bestViewer: bestCandidate.effect.bestViewer,
-                        confidence: confidence
-                    };
-                    this.showRecommendation();
-                }
-            },
+            async computeRecommendation() { return; },
 
-            triggerRecommendation() {
-                clearTimeout(this.recommendationDebounce);
-                this.recommendationDebounce = setTimeout(() => {
-                    this.computeRecommendation();
-                }, 150);
-            },
+            triggerRecommendation() { /* disabled */ },
 
-            showRecommendation() {
-                if (!this.recommendation) return;
-                
-                let pill = document.getElementById('recommendation-pill');
-                if (!pill) {
-                    pill = document.createElement('div');
-                    pill.id = 'recommendation-pill';
-                    pill.style.cssText = `
-                        position: absolute;
-                        top: 20px;
-                        right: 20px;
-                        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-                        color: #fff;
-                        padding: 10px 15px;
-                        border-radius: 8px;
-                        font-size: 12px;
-                        cursor: pointer;
-                        box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
-                        z-index: 1000;
-                        transition: all 0.3s;
-                    `;
-                    pill.onclick = () => this.applyRecommendation();
-                    document.getElementById('canvas-container').appendChild(pill);
-                }
-                
-                const stars = '★'.repeat(this.recommendation.confidence);
-                pill.innerHTML = `
-                    <div style="font-weight: bold;">✨ Recommended</div>
-                    <div>${this.recommendation.encoder.name} @ ${this.recommendation.strength.toFixed(1)}</div>
-                    <div style="font-size: 10px; margin-top: 4px;">View with: ${this.recommendation.bestViewer}</div>
-                    <div style="font-size: 14px; margin-top: 2px;">${stars}</div>
-                `;
-                
-                pill.style.display = 'block';
-            },
+            showRecommendation() { return; },
 
-            applyRecommendation() {
-                if (!this.recommendation || !this.selectedLayerId) return;
-                
-                const layer = this.layers.find(l => l.id === this.selectedLayerId);
-                if (!layer) return;
-                
-                const encoderIndex = this.stegoEffects.findIndex(e => e.id === this.recommendation.encoder.id);
-                if (encoderIndex >= 0) {
-                    layer.effectIndex = encoderIndex;
-                    layer.strength = this.recommendation.strength;
-                    this.cachedEncodedImage = null;
-                    this.updateLayersUI();
-                    this.updateInfoPanel();
-                    this.render();
-                    this.showHint(`Applied: ${this.recommendation.encoder.name}. View with "${this.recommendation.bestViewer}"`, 3000);
-                }
-            },
+            applyRecommendation() { return; },
 
             // ==================== LAYER MANAGEMENT ====================
 
@@ -2333,6 +2226,34 @@
 
             updateInfoPanel() {
                 const infoContent = document.getElementById('info-content');
+                const tagline = document.querySelector('#info-panel .tagline');
+
+                // When in Lighting preview, show filter details instead of encoding method
+                if (this.previewMode === 'lighting') {
+                    if (tagline) tagline.textContent = 'Filter Details';
+
+                    const eff = this.lightingEffects[this.currentLightingIndex];
+                    if (!eff) {
+                        infoContent.innerHTML = `
+                            <p style=\"color: #888; font-size: 11px; text-align: center; font-style: italic;\">No filter selected.</p>
+                        `;
+                        return;
+                    }
+
+                    const linfo = this.getLightingInfo(eff);
+                    const extra = linfo.params ? `<div class=\"info-section-title\">Parameters</div><div class=\"info-text\">${linfo.params}</div>` : '';
+
+                    infoContent.innerHTML = `
+                        <div class=\"method-name\">${eff.name}</div>
+                        <div class=\"info-section-title\">What It Does</div>
+                        <div class=\"info-text\">${linfo.description}</div>
+                        <div class=\"info-section-title\">Forensics Use</div>
+                        <div class=\"info-text\">${linfo.usage}</div>
+                        ${extra}
+                    `;
+                    return;
+                }
+                if (tagline) tagline.textContent = 'Method Details';
 
                 if (!this.selectedLayerId) {
                     infoContent.innerHTML = `
@@ -2454,6 +2375,190 @@
                     description: 'This steganographic method encodes hidden information within the image data.',
                     history: 'Steganography has ancient roots, from invisible inks to modern digital techniques.',
                     recommendedLighting: ['Various lighting effects may reveal hidden content']
+                };
+            },
+
+            // Describe lighting/detection filters for the INFO panel
+            getLightingInfo(effect) {
+                const chNames = ['Red', 'Green', 'Blue'];
+                const name = effect.name || '';
+                const p = effect.params || {};
+
+                // Identify by function reference
+                if (effect.apply === this.brightness) {
+                    return {
+                        description: 'Uniformly boosts RGB intensities across the image.',
+                        usage: 'Good for coaxing out low-contrast payloads that sit just above noise. Diagnostic for testing dynamic range sensitivity: if hidden content strengthens as brightness increases, it likely modulates luminance slightly.',
+                        params: `Boost: ${p.boost ?? '—'}x`
+                    };
+                }
+                if (effect.apply === this.contrast) {
+                    return {
+                        description: 'Expands or compresses differences around mid-gray (global contrast).',
+                        usage: 'Enhances subtle luma modulations typical of local-contrast or high-frequency watermarks. Useful to diagnose whether the signal lives in luminance.',
+                        params: `Factor: ${p.factor ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.isolateChannel) {
+                    return {
+                        description: `Shows only one color channel; others are suppressed.`,
+                        usage: 'Ideal for revealing single-channel or chroma-biased embeds (e.g., red-only nudges). Diagnostic for locating channel-specific anomalies.',
+                        params: `Channel: ${chNames[p.channel ?? 0]}`
+                    };
+                }
+                if (effect.apply === this.amplifyChannel) {
+                    return {
+                        description: `Multiplies one channel while leaving others unchanged.`,
+                        usage: 'Boosts weak single-channel deviations to make chroma nudges or R/G/B imbalances visible.',
+                        params: `Channel: ${chNames[p.channel ?? 0]}, Factor: ${p.factor ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.invert) {
+                    return {
+                        description: 'Inverts all channels (negative image).',
+                        usage: 'Sometimes exposes negative-going embeds or helps separate payload from background tone.',
+                        params: ''
+                    };
+                }
+                if (effect.apply === this.invertChannel) {
+                    return {
+                        description: 'Inverts only the selected channel.',
+                        usage: 'Highlights asymmetric channel encodings by flipping one channel against the others.',
+                        params: `Channel: ${chNames[p.channel ?? 0]}`
+                    };
+                }
+                if (effect.apply === this.bitPlane) {
+                    return {
+                        description: 'Extracts a specific bit from each pixel (bit-plane slicing).',
+                        usage: 'Directly elicits LSB-style steganography. If legible content emerges at a low bit-plane, LSB embedding is likely.',
+                        params: `Channel: ${chNames[p.channel ?? 0]}, Bit: ${p.bit ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.colorDifference) {
+                    return {
+                        description: 'Shows the absolute difference between two color channels.',
+                        usage: 'Reveals chroma mismatches caused by color-biased embeds. Helpful for diagnosing channel coupling issues.',
+                        params: `Pair: ${chNames[p.ch1 ?? 0]} - ${chNames[p.ch2 ?? 1]}, Amplification: x${p.amp ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.gradientDetect) {
+                    return {
+                        description: 'Computes gradient magnitude in a direction (H, V, or both).',
+                        usage: 'Elicits high-frequency payloads placed along edges or textures, common in edge/Laplacian-style watermarks.',
+                        params: `Direction: ${p.direction ?? 'both'}`
+                    };
+                }
+                if (effect.apply === this.aboveAverage) {
+                    return {
+                        description: 'Keeps pixels brighter than the global average, scaled by a boost.',
+                        usage: 'Screens for bright outliers that may encode signals; quick anomaly detector for over-bright embeds.',
+                        params: `Boost: x${p.boost ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.belowAverage) {
+                    return {
+                        description: 'Keeps pixels darker than the global average, scaled by a boost.',
+                        usage: 'Screens for dark outliers; useful for payloads that reduce luminance locally.',
+                        params: `Boost: x${p.boost ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.hueOnly) {
+                    return {
+                        description: 'Visualizes hue while discarding luminance structure.',
+                        usage: 'Exposes hue-nudge steganography where brightness is preserved but color wheel shifts slightly.',
+                        params: ''
+                    };
+                }
+                if (effect.apply === this.saturationOnly) {
+                    return {
+                        description: 'Maps saturation as intensity (grayscale).',
+                        usage: 'Highlights chroma modulation embeds that raise or lower saturation locally.',
+                        params: ''
+                    };
+                }
+                if (effect.apply === this.luminanceOnly) {
+                    return {
+                        description: 'Shows luminance (perceptual brightness) alone.',
+                        usage: 'Useful to test if the signal lives primarily in the luma domain.',
+                        params: ''
+                    };
+                }
+                if (effect.apply === this.hueAmplified) {
+                    return {
+                        description: 'Amplifies hue differences to exaggerate subtle color shifts.',
+                        usage: 'Coaxes out faint hue nudges used to hide payloads without brightness changes.',
+                        params: ''
+                    };
+                }
+                if (effect.apply === this.saturationAmplified) {
+                    return {
+                        description: 'Amplifies saturation to magnify weak color-intensity changes.',
+                        usage: 'Brings out low-level chroma variations that might encode signal.',
+                        params: ''
+                    };
+                }
+                if (effect.apply === this.xorPattern) {
+                    return {
+                        description: 'Applies a per-channel XOR with a constant mask.',
+                        usage: 'Can expose periodic/parity artifacts from certain arithmetic or binary encodings.',
+                        params: `Mask: ${p.value ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.edgeDetect) {
+                    return {
+                        description: 'Edge magnitude via Sobel-like gradients across RGB.',
+                        usage: 'Elicits edge-anchored watermarks and high-frequency embeds; diagnostic for frequency placement.',
+                        params: `Threshold: ${p.threshold ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.posterize) {
+                    return {
+                        description: 'Quantizes intensities into a small number of levels.',
+                        usage: 'Reveals clustered intensity steps indicative of LSB or quantization-based schemes.',
+                        params: `Levels: ${p.levels ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.modulo) {
+                    return {
+                        description: 'Shows pixel values modulo N, re-scaled to full range.',
+                        usage: 'Can elicit repeating residues typical of arithmetic stego or compression side-effects.',
+                        params: `Modulo: ${p.value ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.threshold) {
+                    return {
+                        description: 'Binarizes the image using a fixed threshold on brightness.',
+                        usage: 'Exposes binary-like payloads and cutoffs; quick way to separate signal from background.',
+                        params: `Threshold: ${p.value ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.gamma) {
+                    return {
+                        description: 'Applies a gamma curve to remap tonal response.',
+                        usage: 'Probes shadow/highlight bias to expose embeds that prefer certain intensity ranges.',
+                        params: `Gamma: ${p.gamma ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.colorTemp) {
+                    return {
+                        description: 'Shifts color temperature by nudging red/blue channels.',
+                        usage: 'Accentuates warm/cool residuals that may come from biased embeds.',
+                        params: `Temperature offset: ${p.temp ?? '—'}`
+                    };
+                }
+                if (effect.apply === this.solarize) {
+                    return {
+                        description: 'Inverts values above a threshold (solarization).',
+                        usage: 'Accentuates mid-to-high intensity anomalies; can reveal structured payloads.',
+                        params: `Level: ${p.level ?? '—'}`
+                    };
+                }
+
+                // Fallback
+                return {
+                    description: 'Image filter used to probe for hidden information.',
+                    usage: 'Use as a diagnostic to amplify, isolate, or contrast features that may contain steganography.',
+                    params: ''
                 };
             },
 
@@ -2745,6 +2850,7 @@
                     }
                     this.updateLightingDisplay();
                     this.render();
+                    this.updateInfoPanel();
                     return;
                 }
 
@@ -2790,7 +2896,6 @@
                     this.updateLayersUI();
                     this.updateInfoPanel();
                     this.render(); // Render immediately
-                    this.showHint(this.stegoEffects[layer.effectIndex].name);
                 }
             },
 
@@ -2936,11 +3041,26 @@
                       }
                       this.ctx.drawImage(work, drawX, drawY, drawW, drawH);
                     } else {
-                        // No layers yet, just show base image
-                        const imgAspect = this.baseImage.width / this.baseImage.height;
+                        // No layers yet: apply lighting filter to the base image
+                        const srcW = this.baseImage.width;
+                        const srcH = this.baseImage.height;
+
+                        const work = document.createElement('canvas');
+                        work.width = srcW;
+                        work.height = srcH;
+                        const wctx = work.getContext('2d', { willReadFrequently: true });
+                        wctx.drawImage(this.baseImage, 0, 0);
+
+                        const img = wctx.getImageData(0, 0, srcW, srcH);
+                        const effect = this.lightingEffects[this.currentLightingIndex];
+                        const params = { ...effect.params, workingWidth: srcW, workingHeight: srcH };
+                        effect.apply.call(this, img.data, params);
+                        wctx.putImageData(img, 0, 0);
+
+                        const imgAspect = srcW / srcH;
                         const canvasAspect = this.canvas.width / this.canvas.height;
                         let drawW, drawH, drawX, drawY;
-                        
+
                         if (imgAspect > canvasAspect) {
                             drawW = this.canvas.width;
                             drawH = drawW / imgAspect;
@@ -2952,8 +3072,8 @@
                             drawY = 0;
                             drawX = (this.canvas.width - drawW) / 2;
                         }
-                        
-                        this.ctx.drawImage(this.baseImage, drawX, drawY, drawW, drawH);
+
+                        this.ctx.drawImage(work, drawX, drawY, drawW, drawH);
                     }
                 } else {
                     // Encoding mode - show preview with effects applied
@@ -3114,3 +3234,7 @@
     </script>
 </body>
 </html>
+
+
+
+
