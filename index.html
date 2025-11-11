@@ -74,6 +74,15 @@
             cursor: grab;
         }
 
+        #info-panel {
+            width: 320px;
+            background: linear-gradient(135deg, #1a2e2e 0%, #16213e 100%);
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #ff00d4;
+            box-shadow: -4px 0 20px rgba(255, 0, 212, 0.3);
+        }
+
         #canvas-container.dragging {
             cursor: grabbing;
         }
@@ -282,6 +291,74 @@
             background: rgba(0, 0, 0, 0.3);
             border-radius: 4px;
             margin-top: 5px;
+        }
+
+        .info-section-title {
+            font-size: 12px;
+            color: #00d4ff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .info-text {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #b0b0b0;
+            margin-bottom: 10px;
+        }
+
+        .info-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0;
+        }
+
+        .info-list li {
+            padding: 4px 0;
+            font-size: 11px;
+            color: #9090ff;
+        }
+
+        .info-list li:before {
+            content: "▸ ";
+            color: #ff00d4;
+        }
+
+        .method-name {
+            font-size: 16px;
+            color: #ff00d4;
+            font-weight: bold;
+            text-align: center;
+            padding: 8px;
+            background: rgba(255, 0, 212, 0.1);
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .best-viewer-box {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .best-viewer-label {
+            font-size: 10px;
+            color: #00d4ff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .best-viewer-value {
+            font-size: 13px;
+            color: #00ffff;
+            font-weight: bold;
         }
 
         .param {
@@ -508,6 +585,17 @@
         <div class="hint" id="hint">Load a base image to begin</div>
     </div>
 
+    <div id="info-panel">
+        <h1>INFO</h1>
+        <div class="tagline">Method Details</div>
+
+        <div id="info-content" class="section">
+            <p style="color: #888; font-size: 11px; text-align: center; font-style: italic;">
+                Select a hidden layer to view encoding method information
+            </p>
+        </div>
+    </div>
+
     <input type="file" id="layer-image-input" accept="image/*" style="display: none;">
 
     <script>
@@ -607,65 +695,59 @@
             setupStegoEffects() {
                 const effects = [];
 
-                // E1: Bit-plane (LSB) embed - Best viewer: Bit Plane lighting effects
-                for (const ch of [0, 1, 2]) {
-                    const chName = ['Red', 'Green', 'Blue'][ch];
-                    for (let plane = 0; plane <= 2; plane++) {
-                        effects.push({ 
-                            id: `bitplane_${chName.toLowerCase()}_${plane}`,
-                            name: `LSB ${chName} P${plane}`, 
-                            encode: this.encodeBitPlane, 
-                            params: { channel: ch, plane: plane },
-                            bestViewer: `${chName} Bit ${plane}`,
-                            defaultStrength: 0.5
-                        });
-                    }
-                }
+                // E1: LSB (Least Significant Bit) encoding - Consolidated from 9 effects
+                // Uses layer.lsbChannel (0=Red, 1=Green, 2=Blue) and layer.lsbPlane (0, 1, 2)
+                effects.push({
+                    id: 'lsb',
+                    name: 'LSB Encoding',
+                    encode: this.encodeBitPlane,
+                    params: {}, // Will use layer properties: lsbChannel, lsbPlane
+                    bestViewer: 'Bit Plane (matching channel/plane)',
+                    defaultStrength: 0.5,
+                    requiresControls: true
+                });
 
-                // E2: Hue-only nudge (iso-luminant) - Best viewer: HueOnly / HueAmplified
-                for (let i = 1; i <= 3; i++) {
-                    const deltaMax = i * 2; // 2, 4, 6 degrees
-                    effects.push({ 
-                        id: `hue_${i}`,
-                        name: `Hue ${deltaMax}°`, 
-                        encode: this.encodeHueNudge, 
-                        params: { deltaHueMax: deltaMax },
-                        bestViewer: i <= 1 ? 'Hue Hide' : 'Hue Amp',
-                        defaultStrength: 0.5
-                    });
-                }
+                // E2: Hue Nudge - Consolidated from 3 effects
+                // Uses layer.hueAngle (2, 4, or 6 degrees)
+                effects.push({
+                    id: 'hue',
+                    name: 'Hue Nudge',
+                    encode: this.encodeHueNudge,
+                    params: {}, // Will use layer property: hueAngle
+                    bestViewer: 'Hue Only',
+                    defaultStrength: 0.5,
+                    requiresControls: true
+                });
 
-                // E3: Chroma (iso-luminant) nudge - Best viewer: RedOnly / GreenOnly / BlueOnly
-                for (const bias of ['r', 'g', 'b']) {
-                    const biasName = {'r': 'Red', 'g': 'Green', 'b': 'Blue'}[bias];
-                    effects.push({ 
-                        id: `chroma_${bias}`,
-                        name: `Chroma ${biasName}`, 
-                        encode: this.encodeChromaIso, 
-                        params: { bias: bias },
-                        bestViewer: `${biasName} Only`,
-                        defaultStrength: 0.4
-                    });
-                }
+                // E3: Chroma Nudge - Consolidated from 3 effects
+                // Uses layer.chromaBias ('r', 'g', or 'b')
+                effects.push({
+                    id: 'chroma',
+                    name: 'Chroma Nudge',
+                    encode: this.encodeChromaIso,
+                    params: {}, // Will use layer property: chromaBias
+                    bestViewer: 'Channel isolation (matching bias)',
+                    defaultStrength: 0.4,
+                    requiresControls: true
+                });
 
-                // E4: High-pass watermark - Best viewer: EdgeDetect / Gradient
-                effects.push({ 
+                // E4: High-pass watermark
+                effects.push({
                     id: 'highpass',
-                    name: 'High-Pass Edge', 
-                    encode: this.encodeHighPass, 
+                    name: 'High-Pass Edge',
+                    encode: this.encodeHighPass,
                     params: {},
                     bestViewer: 'Edge Soft',
                     defaultStrength: 0.6
                 });
 
-                // E5: Local contrast watermark - Best viewer: Contrast
-                // Single effect, toned down by half from original
-                effects.push({ 
-                    id: 'contrast_1',
-                    name: 'Local Contrast', 
-                    encode: this.encodeLocalContrast, 
-                    params: { gMax: 0.05 }, // 0.1 / 2 = 0.05
-                    bestViewer: 'Contrast 0.0',
+                // E5: Local contrast watermark
+                effects.push({
+                    id: 'contrast',
+                    name: 'Local Contrast',
+                    encode: this.encodeLocalContrast,
+                    params: {}, // gMax will be calculated from strength
+                    bestViewer: 'Near Contrast 0.0',
                     defaultStrength: 0.5
                 });
 
@@ -1746,6 +1828,7 @@
                     layer.strength = this.recommendation.strength;
                     this.cachedEncodedImage = null;
                     this.updateLayersUI();
+                    this.updateInfoPanel();
                     this.render();
                     this.showHint(`Applied: ${this.recommendation.encoder.name}. View with "${this.recommendation.bestViewer}"`, 3000);
                 }
@@ -1771,13 +1854,19 @@
                     rotation: 0,
                     effectIndex: 0,
                     strength: 1.0, // Default strength
-                    inverted: false
+                    inverted: false,
+                    // Effect-specific parameters
+                    lsbChannel: 0, // Red
+                    lsbPlane: 0, // P0
+                    hueAngle: 2, // 2 degrees
+                    chromaBias: 'r' // Red
                 };
 
                 this.layers.push(layer);
                 this.selectedLayerId = layer.id;
                 this.cachedEncodedImage = null;
                 this.updateLayersUI();
+                this.updateInfoPanel();
                 
                 // Trigger recommendation for new layer
                 this.triggerRecommendation();
@@ -1848,13 +1937,19 @@
                             effectIndex: 0,
                             strength: 1.0, // Default strength
                             originalImage: img,
-                            inverted: false
+                            inverted: false,
+                            // Effect-specific parameters
+                            lsbChannel: 0, // Red
+                            lsbPlane: 0, // P0
+                            hueAngle: 2, // 2 degrees
+                            chromaBias: 'r' // Red
                         };
 
                         this.layers.push(layer);
                         this.selectedLayerId = layer.id;
                         this.cachedEncodedImage = null;
                         this.updateLayersUI();
+                        this.updateInfoPanel();
                         
                         // Trigger recommendation for new layer
                         this.triggerRecommendation();
@@ -2004,15 +2099,16 @@
                     const effectInput = document.createElement('input');
                     effectInput.type = 'number';
                     effectInput.min = '1';
-                    effectInput.max = '17';
+                    effectInput.max = '5';
                     effectInput.value = layer.effectIndex + 1;
                     effectInput.onclick = (e) => e.stopPropagation();
                     effectInput.onchange = (e) => {
                         const val = parseInt(e.target.value);
-                        if (val >= 1 && val <= 17) {
+                        if (val >= 1 && val <= 5) {
                             layer.effectIndex = val - 1;
                             this.cachedEncodedImage = null;
                             this.updateLayersUI();
+                            this.updateInfoPanel();
                             this.render();
                         }
                     };
@@ -2079,16 +2175,154 @@
                         }
                         
                         this.updateLayersUI();
+                        this.updateInfoPanel();
                         this.render();
                     };
                     secondRow.appendChild(invertBtn);
                     controlsDiv.appendChild(secondRow);
 
-                    // Effect name and recommended viewer
+                    // Dynamic effect-specific controls
+                    const effect = this.stegoEffects[layer.effectIndex];
+
+                    if (effect.id === 'lsb') {
+                        // LSB Channel selector
+                        const lsbRow = document.createElement('div');
+                        lsbRow.style.display = 'flex';
+                        lsbRow.style.alignItems = 'center';
+                        lsbRow.style.gap = '5px';
+                        lsbRow.style.marginTop = '5px';
+
+                        const channelLabel = document.createElement('label');
+                        channelLabel.textContent = 'Channel:';
+                        channelLabel.style.fontSize = '10px';
+                        channelLabel.style.minWidth = '55px';
+
+                        const channelSelect = document.createElement('select');
+                        channelSelect.style.background = 'rgba(0, 0, 0, 0.5)';
+                        channelSelect.style.border = '1px solid rgba(255, 0, 212, 0.3)';
+                        channelSelect.style.borderRadius = '4px';
+                        channelSelect.style.color = '#fff';
+                        channelSelect.style.padding = '4px';
+                        channelSelect.style.fontSize = '10px';
+                        channelSelect.innerHTML = `
+                            <option value="0" ${layer.lsbChannel === 0 ? 'selected' : ''}>Red</option>
+                            <option value="1" ${layer.lsbChannel === 1 ? 'selected' : ''}>Green</option>
+                            <option value="2" ${layer.lsbChannel === 2 ? 'selected' : ''}>Blue</option>
+                        `;
+                        channelSelect.onchange = (e) => {
+                            layer.lsbChannel = parseInt(e.target.value);
+                            this.cachedEncodedImage = null;
+                            this.updateInfoPanel();
+                            this.render();
+                        };
+
+                        const planeLabel = document.createElement('label');
+                        planeLabel.textContent = 'Plane:';
+                        planeLabel.style.fontSize = '10px';
+                        planeLabel.style.marginLeft = '5px';
+
+                        const planeSelect = document.createElement('select');
+                        planeSelect.style.background = 'rgba(0, 0, 0, 0.5)';
+                        planeSelect.style.border = '1px solid rgba(255, 0, 212, 0.3)';
+                        planeSelect.style.borderRadius = '4px';
+                        planeSelect.style.color = '#fff';
+                        planeSelect.style.padding = '4px';
+                        planeSelect.style.fontSize = '10px';
+                        planeSelect.innerHTML = `
+                            <option value="0" ${layer.lsbPlane === 0 ? 'selected' : ''}>P0</option>
+                            <option value="1" ${layer.lsbPlane === 1 ? 'selected' : ''}>P1</option>
+                            <option value="2" ${layer.lsbPlane === 2 ? 'selected' : ''}>P2</option>
+                        `;
+                        planeSelect.onchange = (e) => {
+                            layer.lsbPlane = parseInt(e.target.value);
+                            this.cachedEncodedImage = null;
+                            this.updateInfoPanel();
+                            this.render();
+                        };
+
+                        lsbRow.appendChild(channelLabel);
+                        lsbRow.appendChild(channelSelect);
+                        lsbRow.appendChild(planeLabel);
+                        lsbRow.appendChild(planeSelect);
+                        controlsDiv.appendChild(lsbRow);
+                    } else if (effect.id === 'hue') {
+                        // Hue Angle selector
+                        const hueRow = document.createElement('div');
+                        hueRow.style.display = 'flex';
+                        hueRow.style.alignItems = 'center';
+                        hueRow.style.gap = '5px';
+                        hueRow.style.marginTop = '5px';
+
+                        const angleLabel = document.createElement('label');
+                        angleLabel.textContent = 'Angle:';
+                        angleLabel.style.fontSize = '10px';
+                        angleLabel.style.minWidth = '55px';
+
+                        const angleSelect = document.createElement('select');
+                        angleSelect.style.background = 'rgba(0, 0, 0, 0.5)';
+                        angleSelect.style.border = '1px solid rgba(255, 0, 212, 0.3)';
+                        angleSelect.style.borderRadius = '4px';
+                        angleSelect.style.color = '#fff';
+                        angleSelect.style.padding = '4px';
+                        angleSelect.style.fontSize = '10px';
+                        angleSelect.style.width = '80px';
+                        angleSelect.innerHTML = `
+                            <option value="2" ${layer.hueAngle === 2 ? 'selected' : ''}>2°</option>
+                            <option value="4" ${layer.hueAngle === 4 ? 'selected' : ''}>4°</option>
+                            <option value="6" ${layer.hueAngle === 6 ? 'selected' : ''}>6°</option>
+                        `;
+                        angleSelect.onchange = (e) => {
+                            layer.hueAngle = parseInt(e.target.value);
+                            this.cachedEncodedImage = null;
+                            this.updateInfoPanel();
+                            this.render();
+                        };
+
+                        hueRow.appendChild(angleLabel);
+                        hueRow.appendChild(angleSelect);
+                        controlsDiv.appendChild(hueRow);
+                    } else if (effect.id === 'chroma') {
+                        // Chroma Bias selector
+                        const chromaRow = document.createElement('div');
+                        chromaRow.style.display = 'flex';
+                        chromaRow.style.alignItems = 'center';
+                        chromaRow.style.gap = '5px';
+                        chromaRow.style.marginTop = '5px';
+
+                        const biasLabel = document.createElement('label');
+                        biasLabel.textContent = 'Bias:';
+                        biasLabel.style.fontSize = '10px';
+                        biasLabel.style.minWidth = '55px';
+
+                        const biasSelect = document.createElement('select');
+                        biasSelect.style.background = 'rgba(0, 0, 0, 0.5)';
+                        biasSelect.style.border = '1px solid rgba(255, 0, 212, 0.3)';
+                        biasSelect.style.borderRadius = '4px';
+                        biasSelect.style.color = '#fff';
+                        biasSelect.style.padding = '4px';
+                        biasSelect.style.fontSize = '10px';
+                        biasSelect.style.width = '80px';
+                        biasSelect.innerHTML = `
+                            <option value="r" ${layer.chromaBias === 'r' ? 'selected' : ''}>Red</option>
+                            <option value="g" ${layer.chromaBias === 'g' ? 'selected' : ''}>Green</option>
+                            <option value="b" ${layer.chromaBias === 'b' ? 'selected' : ''}>Blue</option>
+                        `;
+                        biasSelect.onchange = (e) => {
+                            layer.chromaBias = e.target.value;
+                            this.cachedEncodedImage = null;
+                            this.updateInfoPanel();
+                            this.render();
+                        };
+
+                        chromaRow.appendChild(biasLabel);
+                        chromaRow.appendChild(biasSelect);
+                        controlsDiv.appendChild(chromaRow);
+                    }
+
+                    // Effect name only (viewer info now in info panel)
                     const effectName = document.createElement('div');
                     effectName.className = 'effect-name';
-                    const effect = this.stegoEffects[layer.effectIndex];
-                    effectName.innerHTML = `<strong>${effect.name}</strong><br><small style="color: #aaa;">Best Viewer: ${effect.bestViewer}</small>`;
+                    effectName.innerHTML = `<strong>${effect.name}</strong>`;
                     
                     itemDiv.appendChild(headerDiv);
                     itemDiv.appendChild(controlsDiv);
@@ -2097,9 +2331,136 @@
                 });
             },
 
+            updateInfoPanel() {
+                const infoContent = document.getElementById('info-content');
+
+                if (!this.selectedLayerId) {
+                    infoContent.innerHTML = `
+                        <p style="color: #888; font-size: 11px; text-align: center; font-style: italic;">
+                            Select a hidden layer to view encoding method information
+                        </p>
+                    `;
+                    return;
+                }
+
+                const layer = this.layers.find(l => l.id === this.selectedLayerId);
+                if (!layer) return;
+
+                const effect = this.stegoEffects[layer.effectIndex];
+                if (!effect) return;
+
+                // Get method information based on effect ID
+                const methodInfo = this.getMethodInfo(effect);
+
+                // Generate specific best viewer recommendation based on layer parameters
+                let bestViewer = effect.bestViewer;
+                if (effect.id === 'lsb') {
+                    const channelNames = ['Red', 'Green', 'Blue'];
+                    const channelName = channelNames[layer.lsbChannel || 0];
+                    const plane = layer.lsbPlane !== undefined ? layer.lsbPlane : 0;
+                    bestViewer = `${channelName} Bit ${plane}`;
+                } else if (effect.id === 'chroma') {
+                    const biasNames = {'r': 'Red', 'g': 'Green', 'b': 'Blue'};
+                    const biasName = biasNames[layer.chromaBias || 'r'];
+                    bestViewer = `${biasName} Only`;
+                }
+
+                infoContent.innerHTML = `
+                    <div class="method-name">${effect.name}</div>
+
+                    <div class="best-viewer-box">
+                        <div class="best-viewer-label">Recommended Viewer</div>
+                        <div class="best-viewer-value">${bestViewer}</div>
+                    </div>
+
+                    <div class="info-section-title">About This Method</div>
+                    <div class="info-text">${methodInfo.description}</div>
+
+                    <div class="info-section-title">Historical Context</div>
+                    <div class="info-text">${methodInfo.history}</div>
+
+                    <div class="info-section-title">Recommended Lighting Effects</div>
+                    <ul class="info-list">
+                        ${methodInfo.recommendedLighting.map(light => `<li>${light}</li>`).join('')}
+                    </ul>
+                `;
+            },
+
+            getMethodInfo(effect) {
+                console.log("effect id=",effect.id);
+                // Determine the base method type
+                //if (effect.id && (effect.id.startsWith('bitplane_') || effect.id.startsWith('lsb'))) {
+                if (effect.id === 'lsb') {
+                    return {
+                        description: 'LSB (Least Significant Bit) steganography modifies the lowest-value bits of pixel color channels to encode hidden data. By changing only the least significant bits, the alterations are imperceptible to the human eye but can store substantial information.',
+                        history: 'LSB embedding traces back to the early days of digital steganography in the 1980s. It became widely studied after Kurak and McHugh\'s 1992 paper on covert channels. The technique gained notoriety when used in real-world espionage and was featured in the 2001 9/11 investigations, though those claims were later disputed. Today, it remains a foundational technique taught in information security courses worldwide.',
+                        recommendedLighting: [
+                            'Bit Plane visualization (matching channel/plane)',
+                            'Channel Amplification',
+                            'Contrast enhancement',
+                            'Histogram analysis'
+                        ]
+                    };
+                //} else if (effect.id && effect.id.startsWith('hue_')) {
+                } else if (effect.id === 'hue') {
+                    return {
+                        description: 'Hue nudging shifts pixel colors along the hue spectrum while preserving brightness (luminance). This creates subtle color changes that are difficult to detect visually but become apparent when isolated to the hue channel alone.',
+                        history: 'Hue-based steganography emerged in the late 1990s as researchers explored perceptual color spaces. The technique exploits the fact that human vision is more sensitive to luminance than to hue variations. It was formalized by Fridrich in 1998 and has since been used in digital watermarking for copyright protection and authentication systems.',
+                        recommendedLighting: [
+                            'Hue Only (isolates hue channel)',
+                            'Hue Amplified (magnifies hue differences)',
+                            'Saturation visualization',
+                            'HSL decomposition'
+                        ]
+                    };
+                //} else if (effect.id && effect.id.startsWith('chroma_')) {
+                } else if (effect.id === 'chroma') {
+                    return {
+                        description: 'Chroma nudging adjusts the color intensity (saturation) in specific color directions while keeping the perceived brightness constant. This technique creates color-biased artifacts that blend naturally with the image but can be revealed through color channel analysis.',
+                        history: 'Developed as an extension of LSB techniques in the early 2000s, chroma-based hiding exploits the human visual system\'s lower sensitivity to chrominance compared to luminance. This approach was popularized by work at universities researching JPEG steganography and became common in digital forensics training.',
+                        recommendedLighting: [
+                            'Single channel isolation (matching bias color)',
+                            'Color channel amplification',
+                            'Red/Green/Blue Only views',
+                            'Chrominance extraction'
+                        ]
+                    };
+                } else if (effect.id === 'highpass') {
+                    return {
+                        description: 'High-pass watermarking embeds data in the high-frequency components of an image using edge-detection filters like the Laplacian. This makes the hidden content appear in areas of rapid pixel change (edges and textures) while leaving smooth regions unaffected.',
+                        history: 'High-pass watermarking was developed in the mid-1990s for robust copyright protection. The technique was pioneered by researchers at MIT and IBM who sought watermarking methods resistant to compression and filtering. It became an IEEE standard approach for image authentication and is still used in broadcast television watermarking today.',
+                        recommendedLighting: [
+                            'Edge detection (Sobel, Canny)',
+                            'Gradient magnitude',
+                            'High-pass filtering',
+                            'Edge enhancement (Soft/Sharp)'
+                        ]
+                    };
+                } else if (effect.id === 'contrast') {
+                    return {
+                        description: 'Local contrast modulation alters the difference between neighboring pixel values in specific regions. It creates subtle texture variations that are imperceptible in normal viewing but become visible when contrast is amplified or when viewing the image at zero contrast baseline.',
+                        history: 'Local contrast watermarking evolved from texture synthesis research in the late 1990s. It was refined by Piva and colleagues at the University of Florence for medical image authentication. The method proved particularly valuable for embedding data in textured regions where traditional LSB methods would be too obvious. It\'s now a standard technique in print-scan resistant watermarking.',
+                        recommendedLighting: [
+                            'Contrast adjustment (near 0.0 baseline)',
+                            'Local histogram equalization',
+                            'Texture emphasis filters',
+                            'Adaptive brightness'
+                        ]
+                    };
+                }
+
+                // Fallback for unknown methods
+                return {
+                    description: 'This steganographic method encodes hidden information within the image data.',
+                    history: 'Steganography has ancient roots, from invisible inks to modern digital techniques.',
+                    recommendedLighting: ['Various lighting effects may reveal hidden content']
+                };
+            },
+
             selectLayer(id) {
                 this.selectedLayerId = id;
                 this.updateLayersUI();
+                this.updateInfoPanel();
                 this.render();
             },
 
@@ -2110,6 +2471,7 @@
                 }
                 this.cachedEncodedImage = null;
                 this.updateLayersUI();
+                this.updateInfoPanel();
                 this.render();
             },
 
@@ -2426,6 +2788,7 @@
 
                     this.cachedEncodedImage = null; // Invalidate cache immediately
                     this.updateLayersUI();
+                    this.updateInfoPanel();
                     this.render(); // Render immediately
                     this.showHint(this.stegoEffects[layer.effectIndex].name);
                 }
@@ -2497,10 +2860,24 @@
 
                     const contentData = contentCtx.getImageData(0, 0, contentCanvas.width, contentCanvas.height);
 
-                    // Apply steganography effect with layer strength
+                    // Apply steganography effect with layer-specific parameters
                     const effect = this.stegoEffects[layer.effectIndex];
-                    const paramsWithStrength = { ...effect.params, strength: layer.strength !== undefined ? layer.strength : 1.0 };
-                    effect.encode.call(this, outputData, contentData, paramsWithStrength);
+                    let params = { ...effect.params, strength: layer.strength !== undefined ? layer.strength : 1.0 };
+
+                    // Add effect-specific parameters from layer
+                    if (effect.id === 'lsb') {
+                        params.channel = layer.lsbChannel !== undefined ? layer.lsbChannel : 0;
+                        params.plane = layer.lsbPlane !== undefined ? layer.lsbPlane : 0;
+                    } else if (effect.id === 'hue') {
+                        params.deltaHueMax = layer.hueAngle !== undefined ? layer.hueAngle : 2;
+                    } else if (effect.id === 'chroma') {
+                        params.bias = layer.chromaBias !== undefined ? layer.chromaBias : 'r';
+                    } else if (effect.id === 'contrast') {
+                        // Fix strength scaling: strength=1 should be 0.025, strength=0.1 should be 0.0025
+                        params.gMax = (params.strength || 1.0) * 0.025;
+                    }
+
+                    effect.encode.call(this, outputData, contentData, params);
                 });
 
                 // Put encoded data back
