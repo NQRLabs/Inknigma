@@ -741,6 +741,19 @@
                     defaultStrength: 0.5
                 });
 
+                // E6: Chromafade LSB Sweep - NQR invention
+                // Sweeps payload left to right across R→G→B channels with overlap crossfades
+                // Uses layer.chromafadePlane (0-2), layer.chromafadeOverlap (0-100%), layer.chromafadeRegions (2-5)
+                effects.push({
+                    id: 'chromafade',
+                    name: 'Chromafade LSB Sweep',
+                    encode: this.encodeChromafadeSweep,
+                    params: {}, // Will use layer properties: chromafadePlane, chromafadeOverlap, chromafadeRegions
+                    bestViewer: 'Cycle through R/G/B bit planes',
+                    defaultStrength: 0.5,
+                    requiresControls: true
+                });
+
                 this.stegoEffects = effects;
             },
 
@@ -1238,6 +1251,91 @@
                             data[i] = this.linear01ToSrgb8(rLin);
                             data[i + 1] = this.linear01ToSrgb8(gLin);
                             data[i + 2] = this.linear01ToSrgb8(bLin);
+                        }
+                    }
+                }
+            },
+
+            // E6: Chromafade LSB Sweep
+            // Best viewer: Cycle through Red Bit N, Green Bit N, Blue Bit N
+            encodeChromafadeSweep(imageData, contentData, params) {
+                const data = imageData.data;
+                const content = contentData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const strength = params.strength !== undefined ? params.strength : 0.5;
+                const plane = params.plane !== undefined ? params.plane : 0;
+                const overlapPct = params.overlapPct !== undefined ? params.overlapPct : 30;
+                const numRegions = params.numRegions !== undefined ? params.numRegions : 3;
+                const bitMask = 1 << plane;
+
+                // Get layer bounds - regions should span the layer content, not the full image
+                const layerX = params.layerX !== undefined ? Math.round(params.layerX) : 0;
+                const layerY = params.layerY !== undefined ? Math.round(params.layerY) : 0;
+                const layerWidth = params.layerWidth !== undefined ? Math.round(params.layerWidth) : width;
+                const layerHeight = params.layerHeight !== undefined ? Math.round(params.layerHeight) : height;
+                const layerRight = layerX + layerWidth;
+                const layerBottom = layerY + layerHeight;
+
+                // Calculate region boundaries based on layer width
+                const regionWidth = layerWidth / numRegions;
+                const overlapWidth = (overlapPct / 100) * regionWidth;
+
+                for (let y = 0; y < height; y++) {
+                    // Skip rows outside layer bounds
+                    if (y < layerY || y >= layerBottom) continue;
+
+                    for (let x = 0; x < width; x++) {
+                        // Skip columns outside layer bounds
+                        if (x < layerX || x >= layerRight) continue;
+
+                        const i = (y * width + x) * 4;
+                        const w = content[i + 3] / 255;
+
+                        if (w > 0) {
+                            // Calculate position relative to layer start
+                            const relativeX = x - layerX;
+
+                            // Determine which region(s) this pixel falls into
+                            const regionIdx = Math.floor(relativeX / regionWidth);
+                            const regionX = relativeX - (regionIdx * regionWidth);
+
+                            // Calculate blend weights for current and next region
+                            let weights = [0, 0, 0]; // R, G, B
+
+                            // Determine primary channel for this region
+                            const primaryChannel = regionIdx % 3;
+                            weights[primaryChannel] = 1.0;
+
+                            // Check if we're in overlap zone with next region
+                            const distFromRegionEnd = regionWidth - regionX;
+                            if (distFromRegionEnd < overlapWidth && regionIdx < numRegions - 1) {
+                                // We're in crossfade zone
+                                const nextChannel = (regionIdx + 1) % 3;
+                                const blendFactor = 1.0 - (distFromRegionEnd / overlapWidth);
+                                weights[primaryChannel] = 1.0 - blendFactor;
+                                weights[nextChannel] = blendFactor;
+                            }
+
+                            // Apply LSB encoding to each channel based on weights
+                            const contentBright = (content[i] + content[i+1] + content[i+2]) / 3;
+                            const targetBit = contentBright > 128 ? 1 : 0;
+
+                            for (let ch = 0; ch < 3; ch++) {
+                                if (weights[ch] > 0) {
+                                    const prob = w * strength * weights[ch];
+                                    const rng = this.hash2d(x, y, plane * 3 + ch);
+
+                                    if (rng < prob) {
+                                        const pixelIdx = i + ch;
+                                        if (targetBit === 1) {
+                                            data[pixelIdx] = data[pixelIdx] | bitMask;
+                                        } else {
+                                            data[pixelIdx] = data[pixelIdx] & ~bitMask;
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1744,7 +1842,10 @@
                     lsbChannel: 0, // Red
                     lsbPlane: 0, // P0
                     hueAngle: 2, // 2 degrees
-                    chromaBias: 'r' // Red
+                    chromaBias: 'r', // Red
+                    chromafadePlane: 0, // P0
+                    chromafadeOverlap: 30, // 30%
+                    chromafadeRegions: 3 // 3 regions (R→G→B)
                 };
 
                 this.layers.push(layer);
@@ -1827,7 +1928,10 @@
                             lsbChannel: 0, // Red
                             lsbPlane: 0, // P0
                             hueAngle: 2, // 2 degrees
-                            chromaBias: 'r' // Red
+                            chromaBias: 'r', // Red
+                            chromafadePlane: 0, // P0
+                            chromafadeOverlap: 30, // 30%
+                            chromafadeRegions: 3 // 3 regions (R→G→B)
                         };
 
                         this.layers.push(layer);
@@ -2202,6 +2306,108 @@
                         chromaRow.appendChild(biasLabel);
                         chromaRow.appendChild(biasSelect);
                         controlsDiv.appendChild(chromaRow);
+                    } else if (effect.id === 'chromafade') {
+                        // Chromafade controls: Plane, Overlap %, Regions
+                        const chromafadeRow1 = document.createElement('div');
+                        chromafadeRow1.style.display = 'flex';
+                        chromafadeRow1.style.alignItems = 'center';
+                        chromafadeRow1.style.gap = '5px';
+                        chromafadeRow1.style.fontSize = '10px';
+                        chromafadeRow1.style.marginTop = '5px';
+
+                        const planeLabel = document.createElement('label');
+                        planeLabel.textContent = 'Plane:';
+                        planeLabel.style.fontSize = '10px';
+                        planeLabel.style.minWidth = '45px';
+
+                        const planeSelect = document.createElement('select');
+                        planeSelect.style.background = 'rgba(0, 0, 0, 0.5)';
+                        planeSelect.style.border = '1px solid rgba(255, 0, 212, 0.3)';
+                        planeSelect.style.borderRadius = '4px';
+                        planeSelect.style.color = '#fff';
+                        planeSelect.style.padding = '4px';
+                        planeSelect.style.fontSize = '10px';
+                        planeSelect.innerHTML = `
+                            <option value="0" ${layer.chromafadePlane === 0 ? 'selected' : ''}>P0</option>
+                            <option value="1" ${layer.chromafadePlane === 1 ? 'selected' : ''}>P1</option>
+                            <option value="2" ${layer.chromafadePlane === 2 ? 'selected' : ''}>P2</option>
+                        `;
+                        planeSelect.onchange = (e) => {
+                            layer.chromafadePlane = parseInt(e.target.value);
+                            this.cachedEncodedImage = null;
+                            this.updateInfoPanel();
+                            this.render();
+                        };
+
+                        const overlapLabel = document.createElement('label');
+                        overlapLabel.textContent = 'Overlap:';
+                        overlapLabel.style.fontSize = '10px';
+                        overlapLabel.style.marginLeft = '8px';
+                        overlapLabel.style.minWidth = '50px';
+
+                        const overlapSelect = document.createElement('select');
+                        overlapSelect.style.background = 'rgba(0, 0, 0, 0.5)';
+                        overlapSelect.style.border = '1px solid rgba(255, 0, 212, 0.3)';
+                        overlapSelect.style.borderRadius = '4px';
+                        overlapSelect.style.color = '#fff';
+                        overlapSelect.style.padding = '4px';
+                        overlapSelect.style.fontSize = '10px';
+                        overlapSelect.innerHTML = `
+                            <option value="10" ${layer.chromafadeOverlap === 10 ? 'selected' : ''}>10%</option>
+                            <option value="20" ${layer.chromafadeOverlap === 20 ? 'selected' : ''}>20%</option>
+                            <option value="30" ${layer.chromafadeOverlap === 30 ? 'selected' : ''}>30%</option>
+                            <option value="40" ${layer.chromafadeOverlap === 40 ? 'selected' : ''}>40%</option>
+                            <option value="50" ${layer.chromafadeOverlap === 50 ? 'selected' : ''}>50%</option>
+                        `;
+                        overlapSelect.onchange = (e) => {
+                            layer.chromafadeOverlap = parseInt(e.target.value);
+                            this.cachedEncodedImage = null;
+                            this.updateInfoPanel();
+                            this.render();
+                        };
+
+                        chromafadeRow1.appendChild(planeLabel);
+                        chromafadeRow1.appendChild(planeSelect);
+                        chromafadeRow1.appendChild(overlapLabel);
+                        chromafadeRow1.appendChild(overlapSelect);
+                        controlsDiv.appendChild(chromafadeRow1);
+
+                        // Row 2: Regions
+                        const chromafadeRow2 = document.createElement('div');
+                        chromafadeRow2.style.display = 'flex';
+                        chromafadeRow2.style.alignItems = 'center';
+                        chromafadeRow2.style.gap = '5px';
+                        chromafadeRow2.style.fontSize = '10px';
+                        chromafadeRow2.style.marginTop = '5px';
+
+                        const regionsLabel = document.createElement('label');
+                        regionsLabel.textContent = 'Regions:';
+                        regionsLabel.style.fontSize = '10px';
+                        regionsLabel.style.minWidth = '55px';
+
+                        const regionsSelect = document.createElement('select');
+                        regionsSelect.style.background = 'rgba(0, 0, 0, 0.5)';
+                        regionsSelect.style.border = '1px solid rgba(255, 0, 212, 0.3)';
+                        regionsSelect.style.borderRadius = '4px';
+                        regionsSelect.style.color = '#fff';
+                        regionsSelect.style.padding = '4px';
+                        regionsSelect.style.fontSize = '10px';
+                        regionsSelect.innerHTML = `
+                            <option value="2" ${layer.chromafadeRegions === 2 ? 'selected' : ''}>2 (R→G)</option>
+                            <option value="3" ${layer.chromafadeRegions === 3 ? 'selected' : ''}>3 (R→G→B)</option>
+                            <option value="4" ${layer.chromafadeRegions === 4 ? 'selected' : ''}>4 (R→G→B→R)</option>
+                            <option value="5" ${layer.chromafadeRegions === 5 ? 'selected' : ''}>5 (R→G→B→R→G)</option>
+                        `;
+                        regionsSelect.onchange = (e) => {
+                            layer.chromafadeRegions = parseInt(e.target.value);
+                            this.cachedEncodedImage = null;
+                            this.updateInfoPanel();
+                            this.render();
+                        };
+
+                        chromafadeRow2.appendChild(regionsLabel);
+                        chromafadeRow2.appendChild(regionsSelect);
+                        controlsDiv.appendChild(chromafadeRow2);
                     }
 
                     // Effect name only (viewer info now in info panel)
@@ -2276,6 +2482,9 @@
                     const biasNames = {'r': 'Red', 'g': 'Green', 'b': 'Blue'};
                     const biasName = biasNames[layer.chromaBias || 'r'];
                     bestViewer = `${biasName} Only`;
+                } else if (effect.id === 'chromafade') {
+                    const plane = layer.chromafadePlane !== undefined ? layer.chromafadePlane : 0;
+                    bestViewer = `Red Bit ${plane}, Green Bit ${plane}, Blue Bit ${plane} (cycle all three)`;
                 }
 
                 infoContent.innerHTML = `
@@ -2358,6 +2567,18 @@
                             'Local histogram equalization',
                             'Texture emphasis filters',
                             'Adaptive brightness'
+                        ]
+                    };
+                } else if (effect.id === 'chromafade') {
+                    return {
+                        description: 'Chromafade LSB Sweep distributes a hidden payload across multiple color channels using spatial regions with crossfade transitions. The message sweeps left-to-right across the image, encoding into Red→Green→Blue bit-planes with overlapping blend zones. To reconstruct the full message, viewers must cycle through matching bit-planes of all three color channels, as each region holds a different portion of the content.',
+                        history: 'Chromafade LSB Sweep was invented by NQR (2025) as an advanced spatial-spectral steganography technique. Unlike traditional single-channel LSB methods, this approach fragments the payload across the color spectrum with smooth transitions, making detection significantly harder without knowing the exact bit-plane and channel distribution. The crossfade overlap ensures graceful degradation—partial reconstruction is possible even if some channels are corrupted. This method is particularly effective for hiding complex visual information that benefits from spatial redundancy and multi-channel encoding. NQR developed this technique to push the boundaries of perceptually transparent steganography while maintaining robust recoverability through channel cycling.',
+                        recommendedLighting: [
+                            'Red Bit N, Green Bit N, Blue Bit N (cycle through all three)',
+                            'Bit Plane visualization (matching plane across all channels)',
+                            'Channel isolation (Red/Green/Blue Only)',
+                            'Channel Amplification',
+                            'Composite bit-plane overlay'
                         ]
                     };
                 }
@@ -2972,6 +3193,15 @@
                     } else if (effect.id === 'contrast') {
                         // Fix strength scaling: strength=1 should be 0.025, strength=0.1 should be 0.0025
                         params.gMax = (params.strength || 1.0) * 0.025;
+                    } else if (effect.id === 'chromafade') {
+                        params.plane = layer.chromafadePlane !== undefined ? layer.chromafadePlane : 0;
+                        params.overlapPct = layer.chromafadeOverlap !== undefined ? layer.chromafadeOverlap : 30;
+                        params.numRegions = layer.chromafadeRegions !== undefined ? layer.chromafadeRegions : 3;
+                        // Pass layer bounds so regions are calculated relative to content, not full image
+                        params.layerX = layer.x;
+                        params.layerY = layer.y;
+                        params.layerWidth = layer.width;
+                        params.layerHeight = layer.height;
                     }
 
                     effect.encode.call(this, outputData, contentData, params);
