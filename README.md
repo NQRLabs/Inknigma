@@ -1,3 +1,5 @@
+<img alt="Inknigma-logo" src="./assets/images/logo.png" style="margin-left:auto; margin-right:auto; display:block; width:200px;"/>
+
 # Inknigma
 
 **Write in Invisible Ink**
