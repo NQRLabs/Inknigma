@@ -17,8 +17,13 @@ Inknigma is a web-based tool for steganography, allowing you to hide secret mess
 - **Interactive Controls**: Easily position, resize, and rotate your hidden layers directly on the canvas.
 - **Strength Adjustment**: Control the intensity of the encoding effect for each layer.
 - **Lighting Preview Mode**: Switch to a special viewing mode to test how different visual analysis techniques might reveal your hidden content. Includes over 170 different lighting effects.
-- **Recommendation System**: Get suggestions for the best encoding effect to use based on the content of your base image.
 - **Download Image**: Save your final encoded image as a PNG file.
+
+### Info Panel Behavior
+
+- In Encoding preview, the INFO panel shows Method Details for the currently selected hidden layer: the encoding method, brief background, and a recommended viewer.
+- In Lighting preview, the INFO panel switches to Filter Details for the active detection filter: what the algorithm does, how it can elicit hidden information, and how to use it diagnostically. It also lists relevant parameters when applicable.
+- The INFO panel updates live when you toggle preview modes, scroll through lighting effects (including Alt+Scroll group jumps), or jump to a filter via the input box.
 
 ## How to Use
 
@@ -32,7 +37,8 @@ Inknigma is a web-based tool for steganography, allowing you to hide secret mess
     - Use the controls in the left panel to change the encoding effect, adjust its strength, or invert the content.
 4.  **Preview**:
     - Click "Switch to Lighting Preview" to see how your image looks under various analytical filters.
-    - Scroll while in lighting mode to cycle through different effects.
+    - Scroll while in lighting mode to cycle through different effects. Use Alt+Scroll to jump by effect groups, or enter an index to jump directly.
+    - Lighting filters now apply even if you have no hidden layers added; the base image is processed directly in this mode.
 5.  **Download**:
     - Once you're happy with your hidden message, click "Download Image" to save the result.
 
@@ -41,3 +47,15 @@ Inknigma is a web-based tool for steganography, allowing you to hide secret mess
 Inknigma is a self-contained HTML file that runs entirely in your browser. It uses the Canvas API for image manipulation and does not require any server-side processing. All encoding and decoding happens locally on your machine.
 
 The lighting effects are based on the detection methods used in tools like [Lucyra](https://nqrlabs.com/Lucyra/), providing a way to "red team" your own steganographic images.
+
+### Controls & Shortcuts
+
+- Pan: drag on the canvas (always in Lighting preview; hold Ctrl in Encoding preview)
+- Zoom: Ctrl + Scroll (zooms to cursor)
+- Change lighting effect: Scroll; Alt + Scroll to jump between effect groups
+- Change layer effect: Scroll over a selected layer’s box
+- Maintain aspect ratio when resizing: Shift + drag
+
+Notes
+
+- The transient 1-second popup when switching layer effects has been removed. Popups remain for other actions (loading files, adding layers, downloads, etc.).
