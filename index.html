@@ -524,11 +524,6 @@
             <div class="section">
                 <button id="download-btn" onclick="app.downloadImage()" disabled>Download Image</button>
             </div>
-
-            <!-- FOOTER / LICENSE -->
-            <footer class="license-footer" id="licenseLink">
-              MIT License • Developed by NQR • Click to view
-            </footer>
         </div>
           
 
@@ -556,11 +551,8 @@
             <div class="section">
                 <button onclick="app.resetView()">Reset View</button>
             </div>
-            <!-- FOOTER / LICENSE -->
-            <footer class="license-footer" id="licenseLinkLighting">
-              MIT License • Developed by NQR • Click to view
-            </footer>
         </div>
+    </div>
         <div class="license-overlay" id="licenseOverlay"></div>
         <div class="license-modal" id="licenseModal" role="dialog" aria-modal="true" aria-labelledby="licenseTitle">
           <div class="license-modal-header">
@@ -578,7 +570,6 @@
           </pre>
         </div>
 
-    </div>
 
     <div id="canvas-container">
         <canvas id="canvas"></canvas>
@@ -594,6 +585,7 @@
                 Select a hidden layer to view encoding method information
             </p>
         </div>
+        <footer class="license-footer" id="licenseLink">MIT License &middot; Developed by NQR &middot; Click to view</footer>
     </div>
 
     <input type="file" id="layer-image-input" accept="image/*" style="display: none;">
@@ -3209,7 +3201,6 @@
         // LICENSE MODAL
         // ============================================================================
         const licenseLink = document.getElementById('licenseLink');
-        const licenseLinkLighting = document.getElementById('licenseLinkLighting');
         const licenseOverlay = document.getElementById('licenseOverlay');
         const licenseModal = document.getElementById('licenseModal');
         const licenseClose = document.getElementById('licenseClose');
@@ -3225,7 +3216,6 @@
         }
 
         licenseLink.addEventListener('click', openLicense);
-        licenseLinkLighting.addEventListener('click', openLicense);
         licenseOverlay.addEventListener('click', closeLicense);
         licenseClose.addEventListener('click', closeLicense);
 
