@@ -1071,6 +1071,9 @@
                             const ch = i + channel;
                             
                             if (rng < prob) {
+                                if (data[i + 3] === 0) {
+                                    data[i + 3] = 1; // keep RGB changes alive on formerly transparent pixels
+                                }
                                 const contentBright = (content[i] + content[i+1] + content[i+2]) / 3;
                                 if (contentBright > 128) {
                                     data[ch] = data[ch] | bitMask;
@@ -1315,6 +1318,7 @@
                         const w = content[i + 3] / 255;
 
                         if (w > 0) {
+                            let ensuredAlpha = false;
                             // Calculate position relative to layer start
                             const relativeX = x - layerX;
 
@@ -1349,6 +1353,10 @@
                                     const rng = this.hash2d(x, y, plane * 3 + ch);
 
                                     if (rng < prob) {
+                                        if (!ensuredAlpha && data[i + 3] === 0) {
+                                            data[i + 3] = 1;
+                                            ensuredAlpha = true;
+                                        }
                                         const pixelIdx = i + ch;
                                         if (targetBit === 1) {
                                             data[pixelIdx] = data[pixelIdx] | bitMask;
@@ -1418,6 +1426,7 @@
                     data[i] = value;
                     data[i + 1] = value;
                     data[i + 2] = value;
+                    data[i + 3] = 255; // force opacity so transparent pixels remain visible
                 }
             },
 
@@ -1671,11 +1680,18 @@
 
                 // Thumbnail overlay dragging
                 const thumbnailOverlay = document.getElementById('thumbnail-overlay');
+                const thumbnailImage = document.getElementById('thumbnail-image');
+                if (thumbnailImage) {
+                    thumbnailImage.setAttribute('draggable', 'false');
+                    thumbnailImage.addEventListener('dragstart', (e) => e.preventDefault());
+                }
+                thumbnailOverlay.addEventListener('dragstart', (e) => e.preventDefault());
                 let isDraggingThumbnail = false;
                 let thumbDragOffsetX = 0;
                 let thumbDragOffsetY = 0;
 
                 thumbnailOverlay.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
                     isDraggingThumbnail = true;
                     const rect = thumbnailOverlay.getBoundingClientRect();
                     thumbDragOffsetX = e.clientX - rect.left;
@@ -2106,6 +2122,7 @@
                 this.cachedEncodedImage = null;
                 this.updateLayersUI();
                 this.updateInfoPanel();
+                this.updateThumbnailOverlay();
                 
                 // Trigger recommendation for new layer
                 this.triggerRecommendation();
@@ -2192,6 +2209,7 @@
                         this.cachedEncodedImage = null;
                         this.updateLayersUI();
                         this.updateInfoPanel();
+                        this.updateThumbnailOverlay();
                         
                         // Trigger recommendation for new layer
                         this.triggerRecommendation();
@@ -2438,6 +2456,7 @@
                             layer.content = tempCanvas.toDataURL();
                         }
                         
+                        this.updateLayerThumbnail(layer.id);
                         this.updateLayersUI();
                         this.updateInfoPanel();
                         this.render();
@@ -3711,9 +3730,10 @@ if (layer.type === 'text') {
                       work.width = srcW;
                       work.height = srcH;
                       const wctx = work.getContext('2d', { willReadFrequently: true });
-                      wctx.drawImage(this.cachedEncodedImage, 0, 0);
-                  
-                      const img = wctx.getImageData(0, 0, srcW, srcH);
+                      
+                      // IMPORTANT: read raw pixels directly from cachedEncodedImage to avoid premultiplying away RGB data when alpha is 0
+                      const sourceCtx = this.cachedEncodedImage.getContext('2d', { willReadFrequently: true });
+                      const img = sourceCtx.getImageData(0, 0, srcW, srcH);
                       const effect = this.lightingEffects[this.currentLightingIndex];
                       const params = { ...effect.params, workingWidth: srcW, workingHeight: srcH }; // pass dims
                       effect.apply.call(this, img.data, params);
